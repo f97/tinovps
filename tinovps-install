@@ -762,14 +762,10 @@ nginx_version="1.28.1"
 release_nginx="1"
 cd /root/
 
-wget --no-check-certificate https://scripts.tino.org/repo_nginx/$system_version/nginx-$nginx_version-$release_nginx.el$system_version.x86_64.rpm
-wget --no-check-certificate https://scripts.tino.org/repo_nginx/$system_version/nginx-module-modsecurity-$nginx_version-$release_nginx.el$system_version.x86_64.rpm
-wget --no-check-certificate https://scripts.tino.org/repo_nginx/$system_version/libmaxminddb-1.12.2-1.el$system_version.x86_64.rpm
+wget --no-check-certificate $GITHUB_RAW_URL/repo_nginx/$system_version/nginx-$nginx_version-$release_nginx.el$system_version.ngx.x86_64.rpm
 
-
-yum localinstall  /root/libmaxminddb-1.12.2-1.el$system_version.x86_64.rpm -y
-yum localinstall /root/nginx-$nginx_version-$release_nginx.el$system_version.x86_64.rpm -y
-yum localinstall /root/nginx-module-modsecurity-$nginx_version-$release_nginx.el$system_version.x86_64.rpm -y
+yum install libmaxminddb -y
+yum localinstall /root/nginx-$nginx_version-$release_nginx.el$system_version.ngx.x86_64.rpm -y
 
 rpm -Uvh  /root/*.rpm
 yum localinstall  /root/*.rpm -y
@@ -982,7 +978,7 @@ systemctl stop firewalld
 
 yum install perl-libwww-perl -y
 cd /tmp
-wget --no-check-certificate https://download.configserver.com/csf.tgz
+wget --no-check-certificate $GITHUB_RAW_URL/csf/csf.tgz
 tar -xzf csf.tgz
 cd csf
 sh install.sh
