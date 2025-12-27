@@ -404,10 +404,6 @@ do
 yum install $x -y
 done
 
-if [ "$sock_tino" -lt 56 ]; then
-  ln -s /opt/remi/php$sock_tino/root/etc /etc/opt/remi/php$sock_tino
-
-fi
 
 ln -s /etc/opt/remi/php$sock_tino/ /opt/php/
 ln -s /etc/opt/remi/php$sock_tino/ /opt/php/php$sock_tino/etc
@@ -532,24 +528,23 @@ sleep 2
 echo "Moi phien ban php ban cai dat them se chiem khoang 200MB dung luong O cung va 15MB RAM"
 echo "De moi chuc nang tren VPS hoat dong on dinh, Chung toi khuyen dung VPS co tu 2GB ram tro len"
 echo "****************************************"
-echo "RHEL 7 (centos 7 ...) Support version php : 5.4 --> 8.5"
-echo "RHEL 8 (centos 8, almalinux 8 ...) Support version php : 5.6 --> 8.5"
+echo "RHEL 8 (centos 8, almalinux 8 ...) Support version php : 7.4 --> 8.5"
 echo "RHEL 9 (centos 9, almalinux 9 ...) Support version php : 7.4 --> 8.5"
 echo "****************************************"
 echo ""
 printf "Vui long tuy chon phien ban php ban muon cai dat ben duoi:\n"
 
 
-arr_ver=("5.4" "5.5" "5.6" "7.0" "7.1" "7.2" "7.3" "7.4" "8.0" "8.1" "8.2" "8.3" "8.4" "8.5")
-arr_go=("5_4" "5_5" "5_6" "7_0" "7_1" "7_2" "7_3" "7_4" "8_0" "8_1" "8_2" "8_3" "8_4" "8_5")
-arr_sock=("54" "55" "56" "70" "71" "72" "73" "74" "80" "81" "82" "83" "84" "85")
+arr_ver=("7.4" "8.0" "8.1" "8.2" "8.3" "8.4" "8.5")
+arr_go=("7_4" "8_0" "8_1" "8_2" "8_3" "8_4" "8_5")
+arr_sock=("74" "80" "81" "82" "83" "84" "85")
 
 php_version="8.5"; # Default PHP 8.5
 php_go="8_5";
 sock_tino=85;
 
-prompt="Nhap vao lua chon cua ban [1-14]: "
-options=("Cai dat PHP 5.4" "Cai dat PHP 5.5" "Cai dat PHP 5.6" "Cai dat PHP 7.0" "Cai dat PHP 7.1" "Cat dat PHP 7.2" "Cai dat PHP 7.3" "Cai dat PHP 7.4" "Cai dat PHP 8.0" "Cai dat PHP 8.1" "Cai dat PHP 8.2" "Cai dat PHP 8.3" "Cai dat PHP 8.4" "Cai dat PHP 8.5")
+prompt="Nhap vao lua chon cua ban [1-7]: "
+options=("Cai dat PHP 7.4" "Cai dat PHP 8.0" "Cai dat PHP 8.1" "Cai dat PHP 8.2" "Cai dat PHP 8.3" "Cai dat PHP 8.4" "Cai dat PHP 8.5")
 PS3="$prompt"
 
 
@@ -567,21 +562,11 @@ select opt in "${options[@]}" "Quit" ; do
      elif (( REPLY > 0 && REPLY <= ${#options[@]} )) ; then
                  #echo $opt
 
- 		if (( REPLY < 3 && ${system_version} == 8 ));then
- 			echo "RHEL 8 (centos 8, almalinux 8 ...) Support version php : 5.6 --> 8.5"
- 		else
-
- 		if (( REPLY < 8 && ${system_version} == 9 ));then
- 		echo "RHEL 9 (centos 9, almalinux 9 ...) Support version php : 7.4 --> 8.5"
- 		else
- 				echo ${arr_go[$REPLY-1]}
+ 		echo ${arr_go[$REPLY-1]}
                  php_version=${arr_ver[$REPLY-1]}
-        	       	php_go=${arr_go[$REPLY-1]}
-        	       	sock_tino=${arr_sock[$REPLY-1]}
+        	php_go=${arr_go[$REPLY-1]}
+        	sock_tino=${arr_sock[$REPLY-1]}
  				break
- 		fi
-
- 		fi
 
      else
          echo "Wrong option, please try again: "
@@ -665,25 +650,6 @@ done
 #yum groupinstall -y 'Development Tools'
 
 
-
-#yum remove -y libzip*
-#yum remove -y libzip
-#wget --no-check-certificate https://github.com/nih-at/libzip/releases/download/v1.10.0/libzip-1.10.0.tar.gz
-#tar -zxvf libzip-1.10.0.tar.gz
-#cd libzip-1.10.0
-#mkdir build
-#cd build
-#cmake3 ..
-#make
-#make install
-
-
-#echo '/usr/local/lib64
-#/usr/local/lib
-#/usr/lib
-#/usr/lib64'>>/etc/ld.so.conf
-
-
 sudo yum install libzip5 -y
 
 memory=$(grep 'MemTotal' /proc/meminfo |tr ' ' '\n' |grep [0-9])
@@ -717,23 +683,9 @@ grep -q -F 'exclude=nginx*' /etc/yum.repos.d/epel.repo || sed -i '/\[epel\]/a\ex
 
 ## download file install
 
-#git clone https://github.com/tinopanel/tino.git
 mkdir /root/tino
 tino='/root/tino'
 
-
-## cai dat php-fpm
-
-#cd $tino
-#mkdir php53
-#cd php53
-#wget --no-check-certificate https://www.php.net/distributions/$php_53.tar.gz
-#tar -vzxf php*
-#cd $tino
-#mkdir php56
-#cd php56
-#wget --no-check-certificate https://www.php.net/distributions/$php_56.tar.gz
-#tar -vzxf php*
 
 CREATE_USER_NGINX
 # install  php-fpm
@@ -883,9 +835,6 @@ cd /opt/tinopanel/ssl
 server_name = "tinopanel"
 admin_password=$(gen_pass)
 cd /etc/nginx/
-
-#wget --no-check-certificate https://scripts.tino.org/dhparam.pem
-
 
 openssl dhparam -out /etc/nginx/dhparam.pem 2048
 openssl genrsa -out server.key 2048
@@ -1059,17 +1008,6 @@ cat > "/etc/quicklemp/tino_version" <<END
 1.0.0
 END
 
-cat > "/etc/quicklemp/php_version_for_install" <<END
-$php_74
-$php_73
-$php_72
-$php_71
-$php_70
-$php_56
-$php_55
-$php_54
-$php_53
-END
 cat > "/etc/resolv.conf" <<END
 nameserver 8.8.8.8
 nameserver 8.8.4.4
@@ -1209,18 +1147,6 @@ curl -O https://raw.githubusercontent.com/wp-cli/builds/gh-pages/phar/wp-cli.pha
 #php wp-cli.phar --info   ## xác nhận tải thành công.
 chmod +x wp-cli.phar ## phân quyền cho wp-cli
 mv wp-cli.phar /usr/local/bin/wp    ## di chuyển wp-cli thành thư viện.
-
-
-
-# phpMyAdmin
-#mkdir /opt/tinopanel/private_html/phpmyadmin/
-#cd /opt/tinopanel/private_html/phpmyadmin/
-#wget --no-check-certificate -q https://files.phpmyadmin.net/phpMyAdmin/4.9.5/phpMyAdmin-4.9.5-english.zip
-#unzip -q phpMyAdmin-4.9.5-english.zip
-#mv -f phpMyAdmin-4.9.5-english/* .
-#rm -rf phpMyAdmin-4.9.5-english*
-
-#phpmyadmin
 
 cd /opt/tinopanel/private_html/
 wget --no-check-certificate -q $GITHUB_RAW_URL/tino.org/guimenu/guimenu.zip
