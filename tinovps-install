@@ -1,4 +1,4 @@
-#!/bin/bash
+﻿#!/bin/bash
 # @author: Lãng Tử Cô Độc
 # @website:  https://tinohost.com, https://kienthuclinux.com
 # @since: 2020
@@ -66,7 +66,7 @@ rm -rf /opt/php/php$sock_tino/etc/php-fpm.d/www.conf
 
 CREATE_USER_NGINX() {
 	if [ ! `cat /etc/passwd | grep nginx` ]; then
-		groupadd -r nginx 
+		groupadd -r nginx
         useradd -r -s /sbin/nologin -M -c "nginx service" -g nginx nginx
 		echo "Finished create user nginx, continues create startup script..."
 		sleep 5
@@ -238,7 +238,7 @@ cat > "/etc/nginx/gzip.conf" <<END
         font/truetype
         font/opentype
         image/svg+xml;
-        
+
     gzip on;
     gzip_disable "MSIE [1-6]\.";
     gzip_static on;
@@ -293,7 +293,7 @@ cat > "/etc/nginx/pagespeed.conf" <<END
     pagespeed SslCertFile /etc/pki/tls/cert.pem;
     pagespeed EnableCachePurge on;
     pagespeed InPlaceResourceOptimization on;
-    
+
 END
 
 
@@ -301,7 +301,7 @@ if (( ${system_version} == 9 ));then
     echo "" > /etc/nginx/pagespeed.conf
 fi
 
-    
+
 cat > "/etc/nginx/proxy.conf" <<END
     proxy_cache_path /var/lib/nginx/cache/proxy levels=1:2 keys_zone=PROXYCACHE:100m max_size=200m inactive=60m;
     proxy_temp_path /var/lib/nginx/cache/proxy_tmp;
@@ -328,7 +328,7 @@ cat > "/etc/nginx/proxy.conf" <<END
     fastcgi_index index.php;
     include fastcgi_params;
     fastcgi_param SCRIPT_FILENAME \$document_root\$fastcgi_script_name;
-    
+
     #limit_req_zone \$binary_remote_addr zone=wplogin:50m rate=15r/m;
 	limit_req_zone       \$limit   zone=wplogin:10m  rate=60r/m;
     #limit_req            zone=wplogin burst=3;
@@ -403,7 +403,7 @@ done
 
 if [ "$sock_tino" -lt 56 ]; then
   ln -s /opt/remi/php$sock_tino/root/etc /etc/opt/remi/php$sock_tino
-  
+
 fi
 
 ln -s /etc/opt/remi/php$sock_tino/ /opt/php/
@@ -435,7 +435,7 @@ done
 
 for key in upload_max_filesize post_max_size max_execution_time max_input_time memory_limit
 do
- sed -i "s/^\($key\).*/\1 $(eval echo = \${$key})/" /etc/opt/remi/php$sock_tino/php.ini 
+ sed -i "s/^\($key\).*/\1 $(eval echo = \${$key})/" /etc/opt/remi/php$sock_tino/php.ini
 done
 
 
@@ -529,21 +529,25 @@ sleep 2
 echo "Moi phien ban php ban cai dat them se chiem khoang 200MB dung luong O cung va 15MB RAM"
 echo "De moi chuc nang tren VPS hoat dong on dinh, Chung toi khuyen dung VPS co tu 2GB ram tro len"
 echo "****************************************"
-echo "RHEL 7 (centos 7 ...) Support version php : 5.4 --> 8.2"
 echo "RHEL 7 (centos 7 ...) Support version php : 5.4 --> 8.5"
-echo ""
+echo "RHEL 8 (centos 8, almalinux 8 ...) Support version php : 5.6 --> 8.5"
 echo "RHEL 9 (centos 9, almalinux 9 ...) Support version php : 7.4 --> 8.5"
+echo "****************************************"
+echo ""
 printf "Vui long tuy chon phien ban php ban muon cai dat ben duoi:\n"
 
 
-arr_ver=("5.4" "5.5" "5.6" "7.0" "7.1" "7.2" "7.3" "7.4" "8.0" "8.1" "8.2")
 arr_ver=("5.4" "5.5" "5.6" "7.0" "7.1" "7.2" "7.3" "7.4" "8.0" "8.1" "8.2" "8.3" "8.4" "8.5")
+arr_go=("5_4" "5_5" "5_6" "7_0" "7_1" "7_2" "7_3" "7_4" "8_0" "8_1" "8_2" "8_3" "8_4" "8_5")
 arr_sock=("54" "55" "56" "70" "71" "72" "73" "74" "80" "81" "82" "83" "84" "85")
-php_version="7.4"; # Default PHP 7.4
+
 php_version="8.5"; # Default PHP 8.5
+php_go="8_5";
 sock_tino=85;
-prompt="Nhap vao lua chon cua ban [1-8]: "
+
 prompt="Nhap vao lua chon cua ban [1-14]: "
+options=("Cai dat PHP 5.4" "Cai dat PHP 5.5" "Cai dat PHP 5.6" "Cai dat PHP 7.0" "Cai dat PHP 7.1" "Cat dat PHP 7.2" "Cai dat PHP 7.3" "Cai dat PHP 7.4" "Cai dat PHP 8.0" "Cai dat PHP 8.1" "Cai dat PHP 8.2" "Cai dat PHP 8.3" "Cai dat PHP 8.4" "Cai dat PHP 8.5")
+PS3="$prompt"
 
 
 
@@ -552,40 +556,40 @@ select opt in "${options[@]}" "Quit" ; do
 
 
 
-    if (( REPLY == 1 + ${#options[@]} )) ; then
-            echo "Thoat Cai Dat"
-            sleep 2
-        exit
-	
-    elif (( REPLY > 0 && REPLY <= ${#options[@]} )) ; then
-                #echo $opt
-        
-		if (( REPLY < 3 && ${system_version} == 8 ));then
-			echo "RHEL 8 (centos 8, almalinux 8 ...) Support version php : 5.6 --> 8.2"
-			echo "RHEL 8 (centos 8, almalinux 8 ...) Support version php : 5.6 --> 8.5"
+     if (( REPLY == 1 + ${#options[@]} )) ; then
+             echo "Thoat Cai Dat"
+             sleep 2
+         exit
 
-		if (( REPLY < 8 && ${system_version} == 9 ));then
-		echo "RHEL 9 (centos 9, almalinux 9 ...) Support version php : 7.4 --> 8.2"
-		echo "RHEL 9 (centos 9, almalinux 9 ...) Support version php : 7.4 --> 8.5"
-				echo ${arr_go[$REPLY-1]}
-                php_version=${arr_ver[$REPLY-1]}
-       	       	php_go=${arr_go[$REPLY-1]}
-       	       	sock_tino=${arr_sock[$REPLY-1]}
-				break
-		fi
+     elif (( REPLY > 0 && REPLY <= ${#options[@]} )) ; then
+                 #echo $opt
 
-		fi
+ 		if (( REPLY < 3 && ${system_version} == 8 ));then
+ 			echo "RHEL 8 (centos 8, almalinux 8 ...) Support version php : 5.6 --> 8.5"
+ 		else
 
-    else
-        echo "Wrong option, please try again: "
-    fi
+ 		if (( REPLY < 8 && ${system_version} == 9 ));then
+ 		echo "RHEL 9 (centos 9, almalinux 9 ...) Support version php : 7.4 --> 8.5"
+ 		else
+ 				echo ${arr_go[$REPLY-1]}
+                 php_version=${arr_ver[$REPLY-1]}
+        	       	php_go=${arr_go[$REPLY-1]}
+        	       	sock_tino=${arr_sock[$REPLY-1]}
+ 				break
+ 		fi
+
+ 		fi
+
+     else
+         echo "Wrong option, please try again: "
+     fi
 done
 
 
 
 admin_port="7979"
 
-echo "phien ban php cai dat la php $php_version , thoi gian cai dat khoang 5-15 phut" 
+echo "phien ban php cai dat la php $php_version , thoi gian cai dat khoang 5-15 phut"
 
 
 rm -f /etc/localtime
@@ -606,7 +610,7 @@ sed -i 's/mirrorlist/#mirrorlist/g' /etc/yum.repos.d/CentOS-* >/dev/null 2>&1
 sed -i 's|#baseurl=http://mirror.centos.org|baseurl=http://vault.centos.org|g' /etc/yum.repos.d/CentOS-* >/dev/null 2>&1
 yum install epel-release -y
 
-yum update -y 
+yum update -y
 yum upgrade -y
 
 curl -O https://raw.githubusercontent.com/AlmaLinux/almalinux-deploy/master/almalinux-deploy.sh && bash almalinux-deploy.sh
@@ -619,7 +623,7 @@ yum install psmisc -y
 rpm -Uvh http://rpms.famillecollet.com/enterprise/remi-release-$system_version.rpm
 yum -y install http://rpms.remirepo.net/enterprise/remi-release-$system_version.rpm
 yum-config-manager --enable remi -y
-yum update -y 
+yum update -y
 
 systemctl stop  saslauthd.service
 systemctl disable saslauthd.service
@@ -645,7 +649,7 @@ mkdir -p /root/tino/
 cd /root/tino/
 
 yum install -y epel-release
-yum install -y cmake3 cmake zlib-devel --enablerepo=epel 
+yum install -y cmake3 cmake zlib-devel --enablerepo=epel
 
 for x in git wget zip unzip perl-ExtUtils-Embed pam-devel gcc gcc-c++ make geoip-devel httpd-tools libxml2-devel libXpm-devel gmp-devel libicu-devel t1lib-devel aspell-devel openssl-devel bzip2-devel libcurl-devel libjpeg-devel libvpx-devel libpng-devel freetype-devel readline-devel libtidy-devel libxslt-devel libmcrypt-devel pcre-devel curl-devel mysql-devel ncurses-devel gettext-devel net-snmp-devel libevent-devel libtool-ltdl-devel libc-client-devel postgresql-devel php-pecl-zip libzip-devel libuuid-devel  net-tools libmaxminddb gd sqlite-devel;
 do
@@ -708,7 +712,7 @@ hwclock --systohc
 grep -q -F 'exclude=nginx*' /etc/yum.repos.d/epel.repo || sed -i '/\[epel\]/a\exclude=nginx*' /etc/yum.repos.d/epel.repo
 
 
-## download file install 
+## download file install
 
 #git clone https://github.com/tinopanel/tino.git
 mkdir /root/tino
@@ -734,11 +738,11 @@ useradd -M -s /bin/nologin tinopanel
 
 
 yum  install re2c -y
-yum remove bison -y 
+yum remove bison -y
 cd /root/tino/
 
         COMPILE_PHP
-        
+
         rm -rf /opt/php/php$sock_tino/etc/php-fpm.d/*
 	    cd /opt/php/php$sock_tino/etc/php-fpm.d/
         TINOPOOL
@@ -750,21 +754,22 @@ cd /root/tino/
 
 ##### cai dat nginx
 
-nginx_version="1.24.0"
-nginx_version="1.28.0"
-release_nginx="1"
+nginx_version="1.28.1"
 
+release_nginx="1"
+cd /root/
 
 wget --no-check-certificate https://scripts.tino.org/repo_nginx/$system_version/nginx-$nginx_version-$release_nginx.el$system_version.x86_64.rpm
 wget --no-check-certificate https://scripts.tino.org/repo_nginx/$system_version/nginx-module-modsecurity-$nginx_version-$release_nginx.el$system_version.x86_64.rpm
-wget --no-check-certificate https://scripts.tino.org/repo_nginx/$system_version/libmaxminddb-1.7.1-1.el$system_version.x86_64.rpm
 wget --no-check-certificate https://scripts.tino.org/repo_nginx/$system_version/libmaxminddb-1.12.2-1.el$system_version.x86_64.rpm
+
+
+yum localinstall  /root/libmaxminddb-1.12.2-1.el$system_version.x86_64.rpm -y
 yum localinstall /root/nginx-$nginx_version-$release_nginx.el$system_version.x86_64.rpm -y
 yum localinstall /root/nginx-module-modsecurity-$nginx_version-$release_nginx.el$system_version.x86_64.rpm -y
-yum localinstall  /root/libmaxminddb-1.7.1-1.el$system_version.x86_64.rpm -y
-yum localinstall  /root/libmaxminddb-1.12.2-1.el$system_version.x86_64.rpm -y
+
+rpm -Uvh  /root/*.rpm
 yum localinstall  /root/*.rpm -y
-rpm -Uvh  /root/*.rpm 
 rm -rf /root/*.rpm
 
 
@@ -805,11 +810,11 @@ server {
     satisfy any;
     allow 127.0.0.1;
     deny all;
- 
+
 	auth_basic "Restricted";
 	auth_basic_user_file /opt/tinopanel/ssl/.htpasswd;
 	if (\$bad_bot) { return 444; }
-	
+
 	server_name_in_redirect off;
 
 	#include conf.d/custom/restrictions.conf;
@@ -822,18 +827,18 @@ server {
     vhost_traffic_status_display;
     vhost_traffic_status_display_format html;
   }
-	
+
 	location /stub_status {
 	stub_status;
 	allow 127.0.0.1;	#only allow requests from localhost
 	deny all;
 	}
-	 
+
 	location /nginx_status {
         stub_status on;
         access_log off;
         include conf.d/custom/admin-ips.conf; deny all;
-    } 
+    }
       location /netdata {
         return 301 /netdata/;
    }
@@ -855,7 +860,7 @@ server {
 
 
     location ~ ^/(status|ping)\$ {
-	fastcgi_pass php; 
+	fastcgi_pass php;
        access_log off;
     }
     	include conf.d/custom/fpm-default.conf;
@@ -954,7 +959,7 @@ systemctl restart mariadb.service
 mysqladmin drop test -f
 
 
-## 
+##
 mkdir -p /etc/quicklemp/menu
 cd /etc/quicklemp/menu
 wget --no-check-certificate http://scripts.tino.org/menu.zip
@@ -963,7 +968,7 @@ rm -rf menu.zip
 chmod +x /etc/quicklemp/menu/*
 
 cd /etc/quicklemp/
-find ./* -type f -exec chmod +x {} \; 
+find ./* -type f -exec chmod +x {} \;
 cd /etc/quicklemp/menu
 mv tino /usr/bin/
 
@@ -1292,7 +1297,7 @@ rm -rf  /tmp/whitelistip.txt
 for opt in `ls /etc/quicklemp/domains/`; do
 {
 echo "TURN ON BLOCK ATTACK DDOS LAYER 7 for $opt"
- 
+
 echo "yes" > /etc/quicklemp/domains/$opt/ddos-mitigation;
 rm -rf /etc/nginx/conf.d/addon_confs/$opt/checkcookie.conf
 cd /etc/nginx/conf.d/addon_confs/$opt/
@@ -1328,13 +1333,13 @@ mkdir -p /opt/antiddos
 cat >  "/etc/systemd/system/antiddostino.service" <<END
 [Unit]
  Description= ON - OFF anti DDOS Layer7
- 
+
 [Service]
  ExecStart=/opt/antiddos/checkload
 
 [Install]
  WantedBy=default.target
- 
+
 END
 
 cat > "/opt/antiddos/checkload" <<END
@@ -1344,20 +1349,20 @@ do
     num=\$(grep ^cpu\\scores /proc/cpuinfo | uniq |  awk '{print \$4}')
     num=$((num * 4))
     load=\$(cat /proc/loadavg |awk '{print \$1}'|cut -d "." -f1)
-    
+
     if [ "\$load" -gt "\$num" ] && [ "\$load" -gt 10 ]; then
         /usr/sbin/migatedddos on;
-        
+
         topnum=\$(cat /home/*/logs/access*_log | awk -v start="\$(date -d '30 minutes ago' +[%d/%b/%Y:%H:%M:%S])" -v end="\$(date +[%d/%b/%Y:%H:%M:%S])" '\$4 > start && \$4 < end' | awk '{ print \$1}' | sort | uniq -c | sort -nr | head -n 1 |  awk '{ print \$1}')
         topip=\$(cat /home/*/logs/access*_log | awk -v start="\$(date -d '30 minutes ago' +[%d/%b/%Y:%H:%M:%S])" -v end="\$(date +[%d/%b/%Y:%H:%M:%S])" '\$4 > start && \$4 < end' | awk '{ print \$1}' | sort | uniq -c | sort -nr | head -n 1 |  awk '{ print \$2}')
-        
+
         if [ "\$topnum" -gt 3000 ]; then
             csf -d  "\$topip"
             echo "\$(date):\$topip:\$topnum"  >> /opt/antiddos/checkload.log
         else
             echo "\$(date)" >> /opt/antiddos/checkload.log
         fi
-        
+
         sleep 900;
         /usr/sbin/migatedddos off;
     fi
@@ -1373,7 +1378,7 @@ then
     sed -i '/testcookie\ /s/off/on/' /etc/nginx/conf.d/addon_confs/*/checkcookie.conf
     echo " migatedddos  has been enable from the vhost configuration!"
 
-	
+
 elif [ "\$value" == "off" ]
 then
     sed -i '/testcookie\ /s/on/off/' /etc/nginx/conf.d/addon_confs/*/checkcookie.conf
@@ -1390,7 +1395,7 @@ for D in /opt/php/*; do
 		php=\${D##*/} # Domain name
 		php_ver=\${php:3}
 		php_full="php-fpm-\${php_ver}"
-	
+
 	echo "restart \$php"
 	service php-fpm-\$php_ver restart
 fi
@@ -1449,7 +1454,7 @@ systemctl enable monit  &>/dev/null
 
 if [ "$sock_tino" -lt 56 ]; then
   ln -s /opt/remi/php$sock_tino/root/etc /etc/opt/remi/php$sock_tino
-  
+
 fi
 
 ln -s /etc/opt/remi/php$sock_tino/ /opt/php/
