@@ -1,0 +1,26 @@
+#!/bin/bash
+echo ""
+echo "====================================================================================="
+echo "Menu Board > Manage Setting SSH"
+echo "/-------------------------/"
+echo "- Manage Setting ssh"
+echo "/-----------------------------------------------------------------------------------/"
+echo 
+PS3='Input number you choose [0=Exit]: '
+options=("Change Password User" "Change Port SSH VPS" "Change Password or Create New User login Admin Page (IP:7979)")
+select opt in "${options[@]}"
+do
+    case $opt in
+        "Change Password User")
+            '/etc/quicklemp/menu/ssh/change_password'
+            ;;
+        "Change Port SSH VPS")
+            '/etc/quicklemp/menu/ssh/change_port'
+            ;;
+        "Change Password or Create New User login Admin Page (IP:7979)")
+            '/etc/quicklemp/menu/ssh/change_password_admin'
+            ;;	
+        *) tino;;
+    esac
+done
+

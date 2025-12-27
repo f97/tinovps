@@ -1,0 +1,34 @@
+#!/bin/bash
+echo ""
+echo "====================================================================================="
+echo "Menu Board > Backup/Restore from Google Drive"
+echo "/-------------------------/"
+echo "- Backup/Restore from Google Drive"
+echo "/-----------------------------------------------------------------------------------/"
+echo 
+PS3='Input number you choose (1-6) [0=Exit]: '
+options=("Connect Google Drive" "Backup To Google Drive Now"  "Restore Code From GD/Choose Date" "Restore Database From GD/Choose Date" "Restore Code GD From Date Ago" "Restore Database GD Form Date Ago")
+select opt in "${options[@]}"
+do
+    case $opt in
+        "Connect Google Drive")
+            '/etc/quicklemp/menu/drive/rclone_config'
+            ;;
+        "Backup To Google Drive Now")
+            '/etc/quicklemp/menu/drive/rclone_drive'
+            ;;
+        "Restore Code From GD/Choose Date")
+            '/etc/quicklemp/menu/drive/rclone_restore_ngay'
+            ;;
+        "Restore Database From GD/Choose Date")
+            '/etc/quicklemp/menu/drive/rclone_restore_ngay_db'
+            ;;
+        "Restore Code GD From Date Ago")
+            '/etc/quicklemp/menu/drive/rclone_restore_so_ngay'
+            ;;
+        "Restore Database GD Form Date Ago")
+            '/etc/quicklemp/menu/drive/rclone_restore_so_ngay_db'
+            ;;
+        *) tino;;
+    esac
+done

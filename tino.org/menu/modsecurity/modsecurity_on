@@ -1,0 +1,87 @@
+# @author: Nguyen Van Phong from TinoHost
+# @website:  https://tinohost.com, https://kienthuclinux.com
+# @since: 2020
+echo ""
+echo "====================================================================================="
+echo "Menu Board > Manage modsecurity > Turn On modsecurity"
+echo "/-------------------------/"
+echo "- Turn On modsecurity"
+echo "/-----------------------------------------------------------------------------------/"
+
+cd /etc/quicklemp/domains/
+
+prompt="Select the domain name you want to enable modsecurity $domain:"
+options=( $(ls -d *) )
+PS3="$prompt "
+
+select opt in "${options[@]}" "Thoat." ; do
+    if (( REPLY == 1 + ${#options[@]} )) ; then
+        /etc/quicklemp/menu/modsecurity_
+
+    elif (( REPLY > 0 && REPLY <= ${#options[@]} )) ; then
+                echo $opt
+        break
+
+    else
+        echo "Wrong option, please try again: "
+    fi
+done
+
+check_mod=$(nginx -V 2>&1 | tr ' ' '\n' | grep 'ModSecurity-nginx')
+if [ "$check_mod" == "" ]; then
+echo "Modsecurity Not Install for VPS, PLs Update Nginx Before..!"
+echo " Menu tino --> 5) Manage Setting Nginx --> 1) Update installed NginX"
+sleep 5
+exit
+fi
+
+
+rm -rf /usr/local/modsecurity-crs
+git clone https://github.com/coreruleset/coreruleset /usr/local/modsecurity-crs
+echo "yes"| mv /usr/local/modsecurity-crs/crs-setup.conf.example /usr/local/modsecurity-crs/crs-setup.conf
+echo "yes"| mv /usr/local/modsecurity-crs/rules/REQUEST-900-EXCLUSION-RULES-BEFORE-CRS.conf.example /usr/local/modsecurity-crs/rules/REQUEST-900-EXCLUSION-RULES-BEFORE-CRS.conf
+mkdir -p /etc/nginx/modsec
+echo "yes"| wget  -O  /etc/nginx/modsec/unicode.mapping https://raw.githubusercontent.com/SpiderLabs/ModSecurity/v3/master/unicode.mapping
+echo "yes"| wget -O /etc/nginx/modsec/modsecurity.conf  https://raw.githubusercontent.com/SpiderLabs/ModSecurity/v3/master/modsecurity.conf-recommended 
+
+sed -i 's/SecRuleEngine DetectionOnly/SecRuleEngine On/' /etc/nginx/modsec/modsecurity.conf
+sed -i 's#SecAuditLog /var/log/modsec_audit.log#SecAuditLog /dev/null#' /etc/nginx/modsec/modsecurity.conf
+sed -i 's#SecAuditEngine RelevantOnly#SecAuditEngine off#' /etc/nginx/modsec/modsecurity.conf
+
+cat > "/etc/nginx/modsec/main.conf" <<END
+Include /etc/nginx/modsec/modsecurity.conf
+Include /usr/local/modsecurity-crs/crs-setup.conf
+Include /usr/local/modsecurity-crs/rules/*.conf
+END
+
+
+sort -f -u /etc/nginx/whitelistip.txt | uniq  > /etc/nginx/whitelistip.tmp
+echo "yes"|mv /etc/nginx/whitelistip.tmp /etc/nginx/whitelistip.txt
+
+
+
+mod_security=$(</etc/quicklemp/domains/$opt/mod_security) >/dev/null 2>&1
+
+if [ "$mod_security" != "yes" ]; then
+echo "yes" > /etc/quicklemp/domains/$opt/mod_security;
+
+
+cat > "/etc/nginx/conf.d/addon_confs/$opt/modsecurity.conf" <<END
+modsecurity on;
+modsecurity_rules_file /etc/nginx/modsec/main.conf;
+END
+
+
+nginxmod=$(nginx -T 2>&1 | grep modsecurity_module.so)
+echo $nginxmod >  /usr/share/nginx/modules/module-modsecurity.conf
+rm -rf /usr/share/nginx/modules/modules.conf
+
+
+
+nginx -s reload
+echo "Turned on Modsecurity for domain $opt success."
+else
+    echo "Modsecurity has been enabled on your domain."
+fi
+
+/etc/quicklemp/menu/modsecurity_

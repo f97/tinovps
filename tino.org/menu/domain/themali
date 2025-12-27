@@ -1,0 +1,368 @@
+#!/bin/bash 
+##TinoVPS Script##
+
+ADD_DOMAIN(){
+clear
+printf "\n"
+printf "=====================================================================================\n"
+printf "Menu Board > Manage Domains > Add New Aliase\n"
+printf "/-------------------------/\n"
+printf "Add New Aliase\n"
+printf "/------------------------------------------------------------------------------------/\n"
+
+echo ""
+cd /etc/quicklemp/domains/
+prompt="Chon ten mien ben tren ban muon them aliase>:"
+options=( $(ls -d *) )
+PS3="$prompt "
+
+select opt in "${options[@]}" "Quit" ; do
+    if (( REPLY == 1 + ${#options[@]} )) ; then
+        exit
+
+    elif (( REPLY > 0 && REPLY <= ${#options[@]} )) ; then
+                echo "ban chon ten mien khoi phuc la: $opt"
+                                maindomain=$opt
+        break
+    else
+        echo "Tuy chon sai, vui long chon so thu tu tuy chon phia tren: "
+    fi
+done
+user=$(</etc/quicklemp/domains/$maindomain/user)
+
+echo ""
+echo -n "Nhap ten mien ban muon  ALIASE cho $maindomain (Ví dụ : example.com) Roi Nhap [ENTER]: " 
+read domain
+
+regex="^(([a-zA-Z]{1})|([a-zA-Z]{1}[a-zA-Z]{1})|([a-zA-Z]{1}[0-9]{1})|([0-9]{1}[a-zA-Z]{1})|([a-zA-Z0-9][-_\.a-zA-Z0-9]{1,61}[a-zA-Z0-9]))\.([a-zA-Z]{2,13}|[a-zA-Z0-9-]{2,30}\.[a-zA-Z]{2,3})$"
+
+if [[ $domain =~ $regex ]] ; then
+    echo "Hệ thống kiểm tra thấy tên miền bạn đã nhập không đúng định dạng."
+else
+echo "Sai định dạng của tên miền, quay về chức năng chính."
+exit
+fi
+if [ "$domain" = "" ]; then
+echo "Tên miền mà bạn đã nhập vào không đúng định dạng, vui lòng thử lại."
+exit
+fi
+if [ -f /etc/nginx/conf.d/vhosts/$domain.conf ]; then
+echo "Hệ thống kiểm tra thấy tên miền bạn vừa thêm đã tồn tại trên VPS, vui lòng kiểm tra lại danh sách tên miền."
+echo "Vui lòng kiểm tra lại danh sách toàn bộ tên miền...!"
+exit
+fi
+
+
+ # cd /opt/php/
+
+
+php_dir=$(</etc/quicklemp/domains/$maindomain/php_dir)
+user=$(</etc/quicklemp/domains/$maindomain/user)
+php_version=$(</etc/quicklemp/domains/$maindomain/php_version)
+page_speed=$(</etc/quicklemp/domains/$maindomain/page_speed)
+echo ""
+php_ver=${php_dir:3}
+echo ""
+
+
+
+echo ""
+echo "*************************************************************************"
+echo "*************************************************************************"
+echo ""
+echo "                     XEM LẠI THÔNG TIN BẠN ĐÃ NHẬP"
+echo ""
+echo "                       Tên mien aliase    : $domain"
+echo "                     Phiên bản PHP : PHP $php_ver"
+echo ""
+echo "*************************************************************************"
+echo "*************************************************************************"
+}
+
+
+
+
+
+ADD_DOMAIN
+counter=1
+while [ $counter == 1 ]
+do
+read -r -p "Bạn có muốn tiếp tục cài đặt này không ?, Nhập vào [Y] để tiếp tục cài đặt và [N] để quay lại bước cài đặt. [Y/N]: " response
+response=${response,,}
+if [[ "$response" =~ ^(yes|y)$ ]]
+then
+   break;
+else
+ADD_DOMAIN
+fi
+done
+
+
+echo "Vui lòng chờ... Hệ thống đang tiến hành thêm tên miền $domain của bạn vào hệ thống..."
+
+sleep 3s;
+
+#useradd -M $user &>/dev/null
+
+mkdir /etc/quicklemp/domains/$domain
+
+mkdir -p /etc/nginx/conf.d/addon_confs/$domain &>/dev/null
+mkdir -p /home/$domain/public_html &>/dev/null
+mkdir -p /home/$domain/logs &>/dev/null
+mkdir -p /home/$domain/ssl &>/dev/null
+mkdir -p /etc/nginx/conf.d/ssl/$domain &>/dev/null
+
+cd /opt/php/
+
+cat > "/opt/php/$php_dir/etc/php-fpm.d/$domain.conf" <<END
+[$domain]
+listen = /dev/shm/$domain.$php_dir.sock;
+user = $user
+group = $user
+listen.owner = nginx
+listen.group = nginx
+listen.mode = 0644
+pm = ondemand
+pm.max_children = 15
+pm.start_servers = 5
+pm.min_spare_servers = 3
+pm.max_spare_servers = 10
+pm.max_requests = 500
+END
+
+cat > "/etc/quicklemp/domains/$domain/user" <<END
+$user
+END
+
+cat > "/etc/quicklemp/domains/$domain/php_dir" <<END
+$php_dir
+END
+cat > "/etc/quicklemp/domains/$domain/page_speed" <<END
+no
+END
+
+cat > "/etc/quicklemp/domains/$domain/php_version" <<END
+$php_version
+END
+
+cat > "/etc/quicklemp/domains/$domain/aliase" <<END
+$maindomain
+END
+
+cp -r /etc/nginx/conf.d/custom/$php_version.conf /etc/nginx/conf.d/addon_confs/$domain/$php_version.conf 
+cp -r /etc/nginx/conf.d/custom/restrictions-users.conf /etc/nginx/conf.d/addon_confs/$domain/restrictions-users.conf
+
+cat > "/etc/quicklemp/domains/$domain/php_tem" <<END
+$php_tem
+END
+ 
+ openssl req -x509 -nodes -new -sha256 -days 1024 -newkey rsa:2048 -keyout /etc/nginx/conf.d/ssl/$domain/privkey.key -out /etc/nginx/conf.d/ssl/$domain/chain.pem -subj "/C=US/CN=$domain" &>/dev/null
+ openssl x509 -outform pem -in /etc/nginx/conf.d/ssl/$domain/chain.pem -out /etc/nginx/conf.d/ssl/$domain/fullchain.crt &>/dev/null
+
+
+   # chown $user:$user /home/$user/$domain
+    chown -R $user:$user /home/$domain/public_html
+    
+    domain_alias="www.$domain"
+    if [[ $domain == *www* ]]; then
+	    domain_alias=${domain/www./''}
+    fi
+    cat > "/etc/nginx/conf.d/vhosts/$domain.conf" <<END
+server {
+        listen 80;
+        server_name $domain $domain_alias;
+        root /home/$maindomain/public_html;
+
+#	    access_log /home/$domain/logs/access_log main;
+#	    error_log /home/$domain/logs/error_log warn;
+
+        if (\$bad_bot) { return 444; }
+        set \$fpmuser $domain.$php_dir;
+    include conf.d/addon_confs/$domain/*.conf;		 
+}
+
+END
+
+ cat > "/etc/nginx/conf.d/vhosts/$domain.ssl.conf" <<END
+server {
+        listen 443 ssl http2;
+        server_name $domain $domain_alias;
+        root /home/$maindomain/public_html;
+		
+#	    access_log /home/$domain/logs/access_ssl_log main;
+#	    error_log /home/$domain/logs/error_ssl_log warn;
+
+        if (\$bad_bot) { return 444; }
+        set \$fpmuser $domain.$php_dir;
+
+        include conf.d/ssl/$domain/ssl.conf;
+        include conf.d/addon_confs/$domain/*.conf;
+}
+END
+cat > "/etc/nginx/conf.d/ssl/$domain/ssl.conf" <<END
+ssl_certificate /etc/nginx/conf.d/ssl/$domain/fullchain.crt;
+ssl_certificate_key /etc/nginx/conf.d/ssl/$domain/privkey.key;
+#ssl_trusted_certificate /etc/nginx/conf.d/ssl/$domain/chain.pem;
+ssl_dhparam /etc/nginx/dhparam.pem;
+ssl_session_timeout 4h;
+ssl_session_cache shared:SSL:20m;
+ssl_session_tickets off;
+ssl_protocols TLSv1.2 TLSv1.3;
+ssl_prefer_server_ciphers on;
+#ssl_ecdh_curve X25519:P-256:P-384:P-224:P-521;
+ssl_buffer_size 1400;
+#ssl_stapling on;
+ssl_stapling_verify on;
+#ssl_trusted_certificate /etc/nginx/conf.d/ssl/$domain/chain.pem;
+resolver 1.1.1.1 8.8.8.8 valid=300s;
+resolver_timeout 5s;
+add_header Strict-Transport-Security "max-age=63072000; includeSubdomains; preload";
+#add_header X-Frame-Options SAMEORIGIN;
+add_header X-Content-Type-Options nosniff;
+
+## Modern compatibility
+ssl_ciphers TLS13-AES-128-GCM-SHA256:TLS13-AES-256-GCM-SHA384:TLS13-CHACHA20-POLY1305-SHA256:ECDHE-ECDSA-AES256-GCM-SHA384:ECDHE-RSA-AES256-GCM-SHA384:ECDHE-ECDSA-CHACHA20-POLY1305:ECDHE-RSA-CHACHA20-POLY1305:ECDHE-ECDSA-AES256-SHA384:ECDHE-RSA-AES256-SHA384;
+
+## Intermediate compatibility
+#ssl_ciphers TLS13-AES-128-GCM-SHA256:TLS13-AES-256-GCM-SHA384:TLS13-CHACHA20-POLY1305-SHA256:ECDHE-ECDSA-CHACHA20-POLY1305:ECDHE-RSA-CHACHA20-POLY1305:ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-RSA-AES128-GCM-SHA256:ECDHE-ECDSA-AES256-GCM-SHA384:ECDHE-RSA-AES256-GCM-SHA384:DHE-RSA-AES128-GCM-SHA256:DHE-RSA-AES256-GCM-SHA384:ECDHE-ECDSA-AES128-SHA256:ECDHE-RSA-AES128-SHA256:ECDHE-ECDSA-AES128-SHA:ECDHE-RSA-AES256-SHA384:ECDHE-RSA-AES128-SHA:ECDHE-ECDSA-AES256-SHA384:ECDHE-ECDSA-AES256-SHA:ECDHE-RSA-AES256-SHA:DHE-RSA-AES128-SHA256:DHE-RSA-AES128-SHA:DHE-RSA-AES256-SHA256:DHE-RSA-AES256-SHA:ECDHE-ECDSA-DES-CBC3-SHA:ECDHE-RSA-DES-CBC3-SHA:EDH-RSA-DES-CBC3-SHA:AES128-GCM-SHA256:AES256-GCM-SHA384:AES128-SHA256:AES256-SHA256:AES128-SHA:AES256-SHA:DES-CBC3-SHA:!DSS;
+
+## Old backward compatibility
+#ssl_ciphers ECDHE-ECDSA-CHACHA20-POLY1305:ECDHE-RSA-CHACHA20-POLY1305:ECDHE-RSA-AES128-GCM-SHA256:ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-RSA-AES256-GCM-SHA384:ECDHE-ECDSA-AES256-GCM-SHA384:DHE-RSA-AES128-GCM-SHA256:DHE-DSS-AES128-GCM-SHA256:kEDH+AESGCM:ECDHE-RSA-AES128-SHA256:ECDHE-ECDSA-AES128-SHA256:ECDHE-RSA-AES128-SHA:ECDHE-ECDSA-AES128-SHA:ECDHE-RSA-AES256-SHA384:ECDHE-ECDSA-AES256-SHA384:ECDHE-RSA-AES256-SHA:ECDHE-ECDSA-AES256-SHA:DHE-RSA-AES128-SHA256:DHE-RSA-AES128-SHA:DHE-DSS-AES128-SHA256:DHE-RSA-AES256-SHA256:DHE-DSS-AES256-SHA:DHE-RSA-AES256-SHA:ECDHE-RSA-DES-CBC3-SHA:ECDHE-ECDSA-DES-CBC3-SHA:EDH-RSA-DES-CBC3-SHA:AES128-GCM-SHA256:AES256-GCM-SHA384:AES128-SHA256:AES256-SHA256:AES128-SHA:AES256-SHA:AES:DES-CBC3-SHA:HIGH:SEED:!aNULL:!eNULL:!EXPORT:!DES:!RC4:!MD5:!PSK:!RSAPSK:!aDH:!aECDH:!EDH-DSS-DES-CBC3-SHA:!KRB5-DES-CBC3-SHA:!SRP;
+END
+
+
+server_ip=$(ip route get 8.8.8.8 | awk -F"src " 'NR==1{split($2,a," ");print a[1]}')
+ip=$(getent hosts $domain | awk '{ print $1 }');
+wwwdomain=www.$domain
+wwwip=$(getent hosts $wwwdomain | awk '{ print $1 }');
+
+echo "$domain dang tro ve IP: $ip"
+echo "$wwwdomain dang tro ve IP: $wwwip"
+
+	if [ "$ip" = "$server_ip" ]; then
+		if [ "$wwwip" = "$server_ip" ]; then
+			echo "Setup Let's Enscrypt for $domain ... and $wwwdomain "
+					/root/.acme.sh/acme.sh  --issue --nginx /home/$domain/public_html/ -d $domain -d $wwwdomain  --server letsencrypt --force || acme.sh  --issue --nginx /home/$domain/public_html/ -d $domain -d $wwwdomain  --server letsencrypt --force	
+				if [ -f /root/.acme.sh/$domain/$domain.cer ]; then
+					echo "Installing SSL for domain $domain, $wwwdomain"
+			
+					/root/.acme.sh/acme.sh --installcert -d $domain --keypath /etc/nginx/conf.d/ssl/$domain/privkey.key --fullchainpath /etc/nginx/conf.d/ssl/$domain/fullchain.crt --reloadcmd "service nginx force-reload" || acme.sh --installcert -d $domain --keypath /etc/nginx/conf.d/ssl/$domain/privkey.key --fullchainpath /etc/nginx/conf.d/ssl/$domain/fullchain.crt --reloadcmd "service nginx force-reload"
+
+					echo "SSL installation is complete."
+				else
+					echo "SSL settings encountered an error, please check again."
+				fi		
+		else		
+			echo "Setup Let's Enscrypt for $domain ... no record exists $wwwdomain "			
+			
+					/root/.acme.sh/acme.sh  --issue --nginx /home/$domain/public_html/ -d $domain  --server letsencrypt --force || acme.sh  --issue --nginx /home/$domain/public_html/ -d $domain  --server letsencrypt --force
+			
+			if [ -f /root/.acme.sh/$domain/$domain.cer ]; then
+				echo "Installing SSL for domain $domain ."
+				
+				/root/.acme.sh/acme.sh --installcert -d $domain --keypath /etc/nginx/conf.d/ssl/$domain/privkey.key --fullchainpath /etc/nginx/conf.d/ssl/$domain/fullchain.crt --reloadcmd "service nginx force-reload" || acme.sh --installcert -d $domain --keypath /etc/nginx/conf.d/ssl/$domain/privkey.key --fullchainpath /etc/nginx/conf.d/ssl/$domain/fullchain.crt --reloadcmd "service nginx force-reload"
+
+				echo "SSL installation is complete."
+			else
+				echo "SSL settings encountered an error, please check again."
+			fi
+		fi
+	else
+	    if [ "$wwwip" = "$server_ip" ]; then
+		    read -r -p "$wwwdomain pointing to the VPS IP, $domain has not been returned to IP VPS, You still want to personalize it $wwwdomain ? [y/N] " response
+            case $response in
+                [yY][eE][sS]|[yY])
+				
+				echo "SSetup Let's Enscrypt for $wwwdomain ... "
+				/root/.acme.sh/acme.sh  --issue --nginx -d $wwwdomain --server letsencrypt --force || acme.sh  --issue --nginx -d $wwwdomain --server letsencrypt --force
+				
+				if [ -f /root/.acme.sh/$domain/$domain.cer ]; then
+					echo "Installing SSL for domain $domain"
+					
+					/root/.acme.sh/acme.sh --installcert -d $domain --keypath /etc/nginx/conf.d/ssl/$domain/privkey.key --fullchainpath /etc/nginx/conf.d/ssl/$domain/fullchain.crt --reloadcmd "service nginx force-reload" || acme.sh --installcert -d $domain --keypath /etc/nginx/conf.d/ssl/$domain/privkey.key --fullchainpath /etc/nginx/conf.d/ssl/$domain/fullchain.crt --reloadcmd "service nginx force-reload"
+					echo "SSL installation is complete."
+				else
+					echo "SSL settings encountered an error, please check again."
+				fi
+			esac
+		fi
+	echo "$domain, $wwwdomain not pointing to IP VPS."		
+	fi
+
+
+
+
+##################################################
+
+aliase_file="/etc/quicklemp/domains/$domain/aliase"
+if [ -f "$aliase_file" ]; then
+    aliase_domain=$(<"$aliase_file")
+else
+    aliase_domain=""
+fi
+
+if [[ -n $aliase_domain && -f "/etc/nginx/conf.d/vhosts/${aliase_domain}.conf" ]]; then
+    sed -i "s/$domain\/public_html;/$aliase_domain\/public_html;/g" /etc/nginx/conf.d/vhosts/$domain.ssl.conf
+    sed -i "s/$domain\/public_html;/$aliase_domain\/public_html;/g" /etc/nginx/conf.d/vhosts/$domain.conf
+	
+fi
+
+if ! systemctl is-active --quiet monit; then
+yum install monit -y  &>/dev/null
+
+rm -rf /etc/monit.d/*
+cat > "/etc/monit.d/logging" <<END
+# log to monit.log
+set logfile /var/log/monit.log
+END
+fi
+
+cat > "/etc/monit.d/disk" <<END
+check device rootfs with path /
+  if space usage > 98% then exec "/bin/bash -c '/usr/bin/find /var/log/messages-* /home/*/logs/access_*.gz /home/*/logs/error_*.gz -delete'"
+END
+cat > "/etc/monit.d/mysql" <<END
+check process mysql with pidfile /var/lib/mysql/sv.pid
+  start program = "/usr/bin/systemctl start mysql"
+  stop program  = "/usr/bin/systemctl stop mysql"
+  if 5 restarts within 5 cycles then timeout
+END
+cat > "/etc/monit.d/nginx" <<END
+check process nginx with pidfile /var/run/nginx.pid
+  start program = "/usr/bin/systemctl start nginx"
+  stop program  = "/usr/bin/systemctl stop nginx"
+END
+
+
+for dir in /opt/php/php*; do
+  if [ -d "$dir" ]; then
+    php="${dir##*/}"
+    php_ver="${php:3}"
+    php_full="php-fpm-${php_ver}"
+
+    cat > "/etc/monit.d/php$php_ver" <<END
+check process php$php_ver with pidfile /opt/php/php$php_ver/var/run/php-fpm.pid
+  start program = "/usr/bin/systemctl start $php_full"
+  stop program = "/usr/bin/systemctl stop $php_full"
+END
+  fi
+done
+systemctl restart monit
+systemctl enable monit
+
+nginx -s reload  &>/dev/null
+
+##################################################
+
+
+ssystemctl start monit
+systemctl enable monit
+
+    nginx -s reload
+
+    service php-fpm-$php_ver restart &>/dev/null
+echo ""
+
+echo "Chuc mung, da them thanh cong aliase $domain vao he thong.!"
+echo ""
+echo "Thu muc chua ma nguon aliase $maindomain : /home/$domain/public_html/"

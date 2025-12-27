@@ -1,0 +1,83 @@
+clear
+# @author: Nguyen Van Phong from TinoHost
+# @website:  https://tinohost.com, https://kienthuclinux.com
+# @since: 2020
+echo ""
+echo "====================================================================================="
+echo "Menu Board > TinoVPS Options > Change Password WordPress"
+echo "/-------------------------/"
+echo "- Change Password WordPress"
+echo "/-----------------------------------------------------------------------------------/"
+echo "Obtaining information about available domain names on VPS."
+echo "Here are the domain names that have been added on your VPS."
+sleep 2
+echo ""
+gen_pass() {
+    MATRIX='0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz'
+    LENGTH=16
+    while [ ${n:=1} -le $LENGTH ]; do
+        PASS="$PASS${MATRIX:$(($RANDOM%${#MATRIX})):1}"
+        let n+=1
+    done
+    echo "$PASS"
+}
+
+cd /etc/quicklemp/domains/
+# check xem da co domain nao tren vps chua
+if [ -z "$(ls -A /etc/quicklemp/domains/)" ]; then
+   echo "you dont have any domain, pls add 1 domain first!!!"
+ /etc/quicklemp/menu/app_
+fi
+## end check
+prompt="Choies domain:"
+options=( $(ls -d *) )
+PS3="$prompt "
+
+select opt in "${options[@]}" "Exit." ; do
+    if (( REPLY == 1 + ${#options[@]} )) ; then
+        /etc/quicklemp/menu/app_
+
+    elif (( REPLY > 0 && REPLY <= ${#options[@]} )) ; then
+                echo $opt
+        break
+
+    else
+        echo "Wrong option, please try again: "
+    fi
+done
+
+domain=$opt
+user=$(</etc/quicklemp/domains/$domain/user)
+php_version=$(</etc/quicklemp/domains/$domain/php_version)
+cd /home/$domain/public_html/
+
+echo -n "Please enter the username will change password for $domain (default: admin) [ENTER]: "
+read username
+
+if [ "$username" = "" ]; then
+echo "It looks like you were typing it wrong, please try again."
+/etc/quicklemp/menu/wordpress_
+fi
+
+if ! [ -f /home/$domain/public_html/wp-config.php ]; then
+echo "domain khong phai la wordpress .. thoat.!"
+/etc/quicklemp/menu/wordpress_
+fi
+
+
+cd /home/$domain/public_html/
+password_site=$(gen_pass)
+
+wp user update $username --user_pass=$password_site --allow-root
+
+echo ""
+echo "================================================================================="
+echo ""
+echo "Link to Login WordPress-Admin : http(s)://$domain/wp-admin"
+echo "Account                       : admin         "
+echo "Password                      : $password_site"
+echo "================================================================================="
+echo ""
+
+
+/etc/quicklemp/menu/wordpress_

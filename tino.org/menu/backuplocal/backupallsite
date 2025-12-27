@@ -1,0 +1,52 @@
+# @author: Lãng Tử Cô Độc
+# @website:  https://tinohost.com, https://kienthuclinux.com
+# @since: 2020
+my_ip=$(ip route get 8.8.8.8 | awk -F"src " 'NR==1{split($2,a," ");print a[1]}')
+port=$(</etc/quicklemp/port.txt)
+
+BACKUP_DIR="/opt/tinopanel/private_html/backupallsite"
+
+MYSQL=/usr/bin/mysql
+MYSQLDUMP=/usr/bin/mysqldump
+SECONDS=0
+mkdir -p /opt/tinopanel/private_html/backupallsite
+mkdir -p "$BACKUP_DIR/mysql"
+cd /opt/tinopanel/private_html/backupallsite/mysql/
+echo "Starting Backup Database";
+databases=`$MYSQL -e "SHOW DATABASES;" | grep -Ev "(Database|information_schema|performance_schema|mysql|yeumoingay)"`
+for db in $databases; do
+	$MYSQLDUMP --force --opt $db | gzip  > "$BACKUP_DIR/mysql/$db.sql.gz"
+
+done
+echo '';
+zip -r alldata.zip /opt/tinopanel/private_html/backupallsite/mysql/*.sql.gz &>/dev/null
+echo "Link backup all database : /opt/tinopanel/private_html/backupallsite/mysql/alldata.zip"
+echo "Link download: http://$my_ip:$port/backupallsite/mysql/alldata.zip"
+echo "----------------------------"
+echo ""
+echo ""
+
+
+echo "Starting Backup Website";
+# Loop through /home directory
+for D in /etc/quicklemp/domains/*; do
+	if [ -d "${D}" ]; then #If a directory
+		domain=${D##*/} # Domain name
+ 		echo ""
+		echo "- Baking up at domain: "$domain;
+		zip -r $BACKUP_DIR/$domain.zip /home/$domain/public_html/ -q -x /home/$user/$domain/public_html/wp-content/cache/**\* 
+		echo "Link backup all code website $domain la: /opt/tinopanel/private_html/backupallsite/$domain.zip"
+                 echo "Link download: http://$my_ip:$port/backupallsite/$domain.zip"
+		echo "----------------------------"
+	fi
+done
+echo "Finished";
+echo '';
+
+
+size=$(du -sh $BACKUP_DIR | awk '{ print $1}')
+duration=$SECONDS
+echo "Time bakup is $size, $(($duration / 60)) minutes and $(($duration % 60)) seconds."
+
+/etc/quicklemp/menu/backuplocal_
+

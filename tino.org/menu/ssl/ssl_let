@@ -1,0 +1,93 @@
+#!/bin/bash 
+#yum install bind-utils -y &> /dev/null
+server_ip=$(dig -4 TXT +short o-o.myaddr.l.google.com @ns1.google.com | sed -e 's/\"//g')
+echo ""
+echo "====================================================================================="
+echo "Menu Board > Manage SSL Certificate > Install Free SSL Let's Enscrypt For Domain"
+echo "/-------------------------/"
+echo "- Install Free SSL Let's Enscrypt For Domain"
+echo "/-----------------------------------------------------------------------------------/"
+echo 
+cd /etc/quicklemp/domains/
+prompt="Choose Domain you need install SSL:"
+
+options=( $(ls -d *) )
+PS3="$prompt "
+select opt in "${options[@]}" "Quit" ; do
+    if (( REPLY == 1 + ${#options[@]} )) ; then
+        /etc/quicklemp/menu/ssl_
+
+    elif (( REPLY > 0 && REPLY <= ${#options[@]} )) ; then
+                echo "you are selecting the recovery domain is: $opt"
+                                domain=$opt
+        break
+    else
+        echo "Wrong option, please select the above options again: "
+    fi
+done
+
+if [ -f /etc/nginx/conf.d/vhosts/$domain.conf ]; then
+    read -r -p "Domain name found $domain, Are you sure install SSL for $domain ?. [y/N] " response
+    case $response in
+         [yY][eE][sS]|[yY])    	
+    user=$(</etc/quicklemp/domains/$domain/user);
+	#yum install bind-utils -y &> /dev/null
+  # ip=$(getent hosts $domain | awk '{ print $1 }');
+	ip=$(dig +short $domain @resolver1.opendns.com | tail -1)
+    wwwdomain=www.$domain
+    wwwip=$(dig +short $wwwdomain @resolver1.opendns.com | tail -1)
+    mkdir -p /etc/nginx/conf.d/ssl/$domain/	
+    echo "$domain point to IP: $ip"        
+    echo "$wwwdomain point to IP: $wwwip"
+
+	
+	if [ "$ip" = "$server_ip" ]; then
+		if [ "$wwwip" = "$server_ip" ]; then
+			echo "Setup Let's Enscrypt for $domain ... and $wwwdomain "
+			/root/.acme.sh/acme.sh  --issue -w /home/$domain/public_html/ -d $domain -d $wwwdomain -k 4096 --server letsencrypt --force			
+				if [ -f /root/.acme.sh/$domain/$domain.cer ]; then
+					echo "Installing SSL for domain $domain, $wwwdomain"
+					/root/.acme.sh/acme.sh --installcert -d $domain --keypath /etc/nginx/conf.d/ssl/$domain/privkey.key --fullchainpath /etc/nginx/conf.d/ssl/$domain/fullchain.crt
+					echo "SSL installation is complete."
+				else
+					echo "SSL settings encountered an error, please check again."
+				fi		
+		else		
+			echo "Setup Let's Enscrypt for $domain ... no record exists $wwwdomain "			
+			/root/.acme.sh/acme.sh  --issue -w /home/$domain/public_html/ -d $domain -k 4096 --server letsencrypt --force
+			if [ -f /root/.acme.sh/$domain/$domain.cer ]; then
+				echo "Installing SSL for domain $domain ."
+				/root/.acme.sh/acme.sh --installcert -d $domain --keypath /etc/nginx/conf.d/ssl/$domain/privkey.key --fullchainpath /etc/nginx/conf.d/ssl/$domain/fullchain.crt
+				echo "SSL installation is complete."
+			else
+				echo "SSL settings encountered an error, please check again."
+			fi
+		fi
+	else
+	    if [ "$wwwip" = "$server_ip" ]; then
+		    read -r -p "$wwwdomain pointing to the VPS IP, $domain has not been returned to IP VPS, You still want to personalize it $wwwdomain ? [y/N] " response
+            case $response in
+                [yY][eE][sS]|[yY])
+				
+				echo "SSetup Let's Enscrypt for $wwwdomain ... "
+				/root/.acme.sh/acme.sh  --issue -w /home/$domain/public_html/ -d $wwwdomain -k 4096 --server letsencrypt --force
+				if [ -f /root/.acme.sh/$domain/$domain.cer ]; then
+					echo "Installing SSL for domain $domain"
+					/root/.acme.sh/acme.sh --installcert -d $domain --keypath /etc/nginx/conf.d/ssl/$domain/privkey.key --fullchainpath /etc/nginx/conf.d/ssl/$domain/fullchain.crt
+					echo "SSL installation is complete."
+				else
+					echo "SSL settings encountered an error, please check again."
+				fi
+			esac
+		fi
+	echo "$domain, $wwwdomain not pointing to IP VPS."		
+	fi	
+nginx -s reload
+esac
+/etc/quicklemp/menu/ssl_
+else
+echo "The system cannot find the domain $domain ."
+/etc/quicklemp/menu/ssl_
+fi
+
+/etc/quicklemp/menu/ssl_

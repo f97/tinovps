@@ -1,0 +1,2 @@
+yum install screen -y
+screen screen -S tf2 /etc/quicklemp/menu/move_vps/move_vps

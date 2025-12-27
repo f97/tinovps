@@ -1,0 +1,39 @@
+# @author: Nguyen Van Phong from TinoHost
+# @website:  https://tinohost.com, https://kienthuclinux.com
+# @since: 2020
+echo ""
+echo "====================================================================================="
+echo "Menu Board > Manage ddos-mitigation > Turn OFF ddos-mitigation"
+echo "/-------------------------/"
+echo "- Turn OFF ddos-mitigation"
+echo "/-----------------------------------------------------------------------------------/"
+
+cd /etc/quicklemp/domains/
+
+prompt="Select the domain name you want to enable ddos-mitigation $domain:"
+options=( $(ls -d *) )
+PS3="$prompt "
+
+select opt in "${options[@]}" "Thoat." ; do
+    if (( REPLY == 1 + ${#options[@]} )) ; then
+        /etc/quicklemp/menu/ddos-mitigation_
+
+    elif (( REPLY > 0 && REPLY <= ${#options[@]} )) ; then
+                echo $opt
+        break
+
+    else
+        echo "Wrong option, please try again: "
+    fi
+done
+
+
+
+echo "no" > /etc/quicklemp/domains/$opt/ddos-mitigation; &>/dev/null
+sed -i '/testcookie\ /s/on/off/' /etc/nginx/conf.d/addon_confs/$opt/checkcookie.conf &>/dev/null
+rm -rf /etc/nginx/conf.d/addon_confs/$opt/checkcookieload.conf
+
+nginx -s reload
+echo "Turned on ddos-mitigation for domain $opt success."
+
+/etc/quicklemp/menu/ddos-mitigation_

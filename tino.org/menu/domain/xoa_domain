@@ -1,0 +1,47 @@
+# @author: Nguyen Van Phong from TinoHost
+# @website:  https://tinohost.com, https://kienthuclinux.com
+# @since: 2020
+echo ""
+echo "====================================================================================="
+echo "Menu Board > Manage Domains > Delete Domain"
+echo "/-------------------------/"
+echo "- Delete Domain"
+echo "/-----------------------------------------------------------------------------------/"
+echo ""
+echo -n "Please enter the domain name you need to DELETE and press [ENTER]: " 
+read domain
+
+if [ -f /etc/nginx/conf.d/vhosts/$domain.conf ]; then
+read -r -p "The system found the domain $domain Are you sure you will delete this domain?.[y/N] : " response
+sleep 2
+echo "Please be patient, the system is performing your operation ..."
+sleep 3
+case $response in
+    [yY][eE][sS]|[yY])
+user=$(</etc/quicklemp/domains/$domain/user)
+php_dir=$(</etc/quicklemp/domains/$domain/php_dir)
+#xoa ssl config
+rm -rf /etc/nginx/conf.d/ssl/$domain/
+rm -rf /etc/nginx/conf.d/addon_confs/$domain/
+#xoa user 
+rm -f /etc/quicklemp/users/$domain
+rm -rf /etc/quicklemp/domains/$domain
+rm -rf /home/$domain
+rm -rf /etc/nginx/conf.d/vhosts/$domain*
+rm -f /opt/php/$php_dir/etc/php-fpm.d/$domain.conf
+rm -rf /etc/quicklemp/domains/$domain/
+rm -rf /root/.acme.sh/$domain
+nginx -s reload
+echo "You have made DELETE the domain $domain on the successful system...!"
+        ;;
+    *)
+        echo "Back to the main functions...!"
+        ;;
+esac
+else
+echo "Sorry, the domain cannot be found $domain, Please check the information again!"
+echo "Back to the main functions...!"
+/etc/quicklemp/menu/domain_
+fi
+
+/etc/quicklemp/menu/domain_

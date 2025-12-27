@@ -1,0 +1,77 @@
+curl https://rclone.org/install.sh | bash  &> /dev/null
+clear
+my_ip=$(ip route get 8.8.8.8 | awk -F"src " 'NR==1{split($2,a," ");print a[1]}')
+
+echo ""
+echo "====================================================================================="
+echo "Menu Board > Backup/Restore From Google Drive > Connect Google Drive"
+echo "/-------------------------/"
+echo "- Connect Google Drive"
+echo "/-----------------------------------------------------------------------------------/"
+echo "de truy cap duoc link  http://127.0.0.1:53682/ tu trinh duyet , vui long SSH vao VPS tu terminal voi cu phap sau"
+echo "luu y: cu phap ket noi la bat buoc"
+echo ""
+echo  "ssh root@${my_ip} -L 53682:127.0.0.1:53682"
+echo ""
+sleep 5
+echo "create link to connect Google Drive ..."
+sleep 5
+rm -rf /root/.config/rclone/rclone.conf 
+
+rclone config create remote drive
+
+echo ""
+echo "Connect  to Google Drive oke !!!"
+
+echo ""
+echo ""
+echo "Recheck connection to Google Drive ..."
+echo ""
+echo "test" > /tmp/tinotest.txt
+rclone copy /tmp/tinotest.txt remote:
+/usr/bin/rclone ls remote:tinotest.txt > /tmp/test
+
+if [ -s /tmp/test ]; then
+	echo ""
+	echo "HAPPY, CONNECTED TO GOOGLE DRIVE SUCCESS!!!"
+	rm -rf /tmp/tinotest.txt
+	rclone delete remote:tinotest.txt
+else
+	echo "The connection failed, please check the information of the steps performed and re-performed. :("
+/etc/quicklemp/menu/drive_
+fi
+
+counter=1
+while [ $counter == 1 ]
+do
+echo -n "Please enter the number of weeks you want to keep the backup copies (1 week = 7 days). >"
+read number
+
+if [ "1" -gt "$number" ]; then
+echo "The value you are entering is less than 0, the system default will be set as 1 week (7 Data backup date)"
+number=1
+fi
+if ! [[ "$number" =~ ^[0-9]+$ ]]
+    then
+        echo ""
+        echo "Sorry, please enter the correct number format:"
+else
+
+cat > "/etc/quicklemp/number_backup" <<END
+$number
+END
+
+sed '/^10.*drive$/d' /var/spool/cron/root  > /tmp/cron
+old_cron=$(</tmp/cron)
+#crontab -r
+echo "$old_cron"  > /var/spool/cron/root
+echo "10 2 * * * /etc/quicklemp/menu/drive/rclone_drive" >> /var/spool/cron/root
+sleep 3
+echo "Saving your settings ..."
+sleep 3
+echo "Congratulations, all setup is complete."
+break
+fi
+done
+
+/etc/quicklemp/menu/drive_

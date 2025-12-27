@@ -1,0 +1,32 @@
+echo "========================================================================="
+echo "Firewall Manage"
+echo "========================================================================="
+PS3='Nhap Lua Chon (1-7) [0=Exit]: '
+options=("List IP Block On VPS" "Quick Block IP" "Quick Unblock IP" "Quick Whitelist IP" "Check IP Blocked Or Not" "Open Port On VPS" "List Port Open On VPS")
+select opt in "${options[@]}"
+do
+    case $opt in
+        "List IP Block On VPS")
+            '/etc/quicklemp/menu/csf/list_ip'
+            ;;
+        "Quick Block IP")
+            '/etc/quicklemp/menu/csf/block_ip'
+            ;;
+        "Quick Unblock IP")
+            '/etc/quicklemp/menu/csf/unblock_ip'
+            ;;
+        "Quick Whitelist IP")
+            '/etc/quicklemp/menu/csf/white_ip'
+            ;;
+        "Check IP Blocked Or Not")
+            '/etc/quicklemp/menu/csf/check_ip'
+            ;;
+        "Open Port On VPS")
+            '/etc/quicklemp/menu/csf/open_port'
+            ;;
+        "List Port Open On VPS")
+            '/etc/quicklemp/menu/csf/list_port'
+            ;;
+        *) tino;;
+    esac
+done

@@ -1,0 +1,114 @@
+# @author: Lãng Tử Cô Độc
+# @website:  https://tinohost.com, https://kienthuclinux.com
+# @since: 2020clear
+echo ""
+echo "====================================================================================="
+echo "Menu Board > Manage Nginx > Rebuild Vhost Domain "
+echo "/-------------------------/"
+echo "- Change PHP Version for Domain"
+echo "/-----------------------------------------------------------------------------------/"
+
+
+for D in /etc/quicklemp/domains/*; do
+if [ -d "${D}" ]; then #If a directory
+domain=${D##*/}
+domain_alias="www.$domain"
+    if [[ $domain == *www* ]]; then
+	    domain_alias=${domain/www./''}
+    fi
+	
+echo "chuyen huong http sang https cho domain $domain"          			
+
+ cat > "/etc/nginx/conf.d/vhosts/$domain.conf" <<END
+server {
+        listen 80;
+        server_name $domain $domain_alias;
+        root /home/$domain/public_html;
+		
+	    access_log /home/$domain/logs/access_ssl_log main;
+	    error_log /home/$domain/logs/error_ssl_log warn;
+		return 301 https://\$host\$request_uri;
+
+}
+END
+
+fi
+done
+
+##################################################
+aliase_file="/etc/quicklemp/domains/$domain/aliase"
+if [ -f "$aliase_file" ]; then
+    aliase_domain=$(<"$aliase_file")
+else
+    aliase_domain=""
+fi
+
+if [[ -n $aliase_domain && -f "/etc/nginx/conf.d/vhosts/${aliase_domain}.conf" ]]; then
+    sed -i "s/$domain\/public_html;/$aliase_domain\/public_html;/g" /etc/nginx/conf.d/vhosts/$domain.ssl.conf
+    sed -i "s/$domain\/public_html;/$aliase_domain\/public_html;/g" /etc/nginx/conf.d/vhosts/$domain.conf
+	
+fi
+
+if ! systemctl is-active --quiet monit; then
+yum install monit -y  &>/dev/null
+
+rm -rf /etc/monit.d/*
+cat > "/etc/monit.d/logging" <<END
+# log to monit.log
+set logfile /var/log/monit.log
+END
+fi
+
+
+cat > "/etc/monit.d/disk" <<END
+check device rootfs with path /
+  if space usage > 98% then exec "/bin/bash -c '/usr/bin/find /var/log/messages-* /home/*/logs/access_*.gz /home/*/logs/error_*.gz -delete'"
+END
+cat > "/etc/monit.d/mysql" <<END
+check process mysql with pidfile /var/lib/mysql/sv.pid
+  start program = "/usr/bin/systemctl start mysql"
+  stop program  = "/usr/bin/systemctl stop mysql"
+  if 5 restarts within 5 cycles then timeout
+END
+cat > "/etc/monit.d/nginx" <<END
+check process nginx with pidfile /var/run/nginx.pid
+  start program = "/usr/bin/systemctl start nginx"
+  stop program  = "/usr/bin/systemctl stop nginx"
+END
+
+
+for dir in /opt/php/php*; do
+  if [ -d "$dir" ]; then
+    php="${dir##*/}"
+    php_ver="${php:3}"
+    php_full="php-fpm-${php_ver}"
+
+    cat > "/etc/monit.d/php$php_ver" <<END
+check process php$php_ver with pidfile /opt/php/php$php_ver/var/run/php-fpm.pid
+  start program = "/usr/bin/systemctl start $php_full"
+  stop program = "/usr/bin/systemctl stop $php_full"
+END
+  fi
+done
+systemctl restart monit
+systemctl enable monit
+
+nginx -s reload  &>/dev/null
+
+##################################################
+
+echo ""
+rm -rf /var/lib/nginx/cache/fastcgi/*
+
+for D in /opt/php/*; do
+if [ -d "${D}" ]; then #If a directory
+php_ver=${D##*/}
+php_version=${php_ver:3}
+service php-fpm-$php_version restart >&/dev/null
+fi
+done
+
+
+
+echo "All domain redirect https done!!!**!!!"
+/etc/quicklemp/menu/domain_

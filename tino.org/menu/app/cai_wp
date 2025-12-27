@@ -1,0 +1,138 @@
+clear
+# @author: Nguyen Van Phong from TinoHost
+# @website:  https://tinohost.com, https://kienthuclinux.com
+# @since: 2020
+echo ""
+echo "====================================================================================="
+echo "Menu Board > TinoVPS Options > Automatic Install Website WordPress"
+echo "/-------------------------/"
+echo "- Automatic Install Website WordPress"
+echo "/-----------------------------------------------------------------------------------/"
+echo "Obtaining information about available domain names on VPS."
+echo "Here are the domain names that have been added on your VPS."
+sleep 2
+echo ""
+gen_pass() {
+    MATRIX='0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz'
+    LENGTH=16
+    while [ ${n:=1} -le $LENGTH ]; do
+        PASS="$PASS${MATRIX:$(($RANDOM%${#MATRIX})):1}"
+        let n+=1
+    done
+    echo "$PASS"
+}
+gen_user() {
+    MATRIX='abcdefghijklmnopqrstuvwxyz'
+    LENGTH=6
+    while [ ${n:=1} -le $LENGTH ]; do
+        PASS="$PASS${MATRIX:$(($RANDOM%${#MATRIX})):1}"
+        let n+=1
+    done
+    echo "$PASS"
+}
+cd /etc/quicklemp/domains/
+# check xem da co domain nao tren vps chua
+if [ -z "$(ls -A /etc/quicklemp/domains/)" ]; then
+   echo "you dont have any domain, pls add 1 domain first!!!"
+ /etc/quicklemp/menu/app_
+fi
+## end check
+prompt="Please select the domain name with the corresponding number to install WordPress Website $domain:"
+options=( $(ls -d *) )
+PS3="$prompt "
+
+select opt in "${options[@]}" "Exit." ; do
+    if (( REPLY == 1 + ${#options[@]} )) ; then
+        /etc/quicklemp/menu/app_
+
+    elif (( REPLY > 0 && REPLY <= ${#options[@]} )) ; then
+                echo $opt
+        break
+
+    else
+        echo "Wrong option, please try again: "
+    fi
+done
+
+domain=$opt
+user=$(</etc/quicklemp/domains/$domain/user)
+php_version=$(</etc/quicklemp/domains/$domain/php_version)
+cd /home/$domain/public_html/
+read -r -p "Installing the WordPress Website will delete all data on the domain $domain If you already have data, do you want to continue ?.[y/N]: " response
+case $response in
+    [yY][eE][sS]|[yY])
+
+regex="^([A-Za-z]+[A-Za-z0-9]*((\.|\-|\_)?[A-Za-z]+[A-Za-z0-9]*){1,})@(([A-Za-z]+[A-Za-z0-9]*)+((\.|\-|\_)?([A-Za-z]+[A-Za-z0-9]*)+){1,})+\.([A-Za-z]{2,})+"
+echo -n "Please enter the Management Email for domain name $domain [ENTER]: "
+read email
+email=$( echo "$email" | sed "s/ //g" )
+if [[ $email =~ $regex ]] ; then
+    echo ""
+if [ "$email" = "" ]; then
+echo "It looks like you were typing it wrong, please try again."
+/etc/quicklemp/menu/app_
+fi
+read -r -p "Do you want to use the Website with HTTPS protocol? ?. [y/N]: " response
+if [[ "$response" =~ ^([yY][eE][sS]|[yY])$ ]]
+then
+    link="https"
+else
+    link="http"
+fi
+echo $link
+
+cd /home/$domain/public_html/
+rm -rf *
+rm -rf /var/lib/nginx/cache/fastcgi/*
+wp core download --version=latest --allow-root
+chown -R $user:$user *
+ali_user=$(gen_user)
+password=$(gen_pass)
+password_site=$(gen_pass)
+
+if [[ $user == *['!'@#\$%^\&*()_+-]* ]]
+then
+dataname=$(gen_user)
+username=$dataname
+else
+dataname="${user}_${ali_user}"
+username="${user}_${ali_user}"
+fi
+
+
+
+mysql -e "CREATE DATABASE IF NOT EXISTS $dataname"
+mysql -e "CREATE USER IF NOT EXISTS '$username'@'localhost' IDENTIFIED BY '$password'"
+mysql -e "GRANT ALL PRIVILEGES ON $dataname.* TO '$username'@'localhost'"
+mysql -e "FLUSH PRIVILEGES"
+echo ""
+echo "The system created Database with the name $dataname success !."
+echo "================================================================================="
+echo ""
+echo "Information detail for Database:"
+printf "Database Name: $dataname\nDatabase User: $username\nDatabase Password: $password\n\n"
+echo "================================================================================="
+cd /home/$domain/public_html/
+wp config create  --dbname=$dataname --dbuser=$username --dbpass=$password --allow-root
+if [ "$php_version" = "fpm-wordpress-sub-cache" ] || [ "$php_version" = "fpm-wordpress-sub-cache-users" ] || [ "$php_version" = "fpm-wordpress-sub" ]|| [ "$php_version" = "fpm-wordpress-sub-users" ]; then
+wp core multisite-install  --url=$link://$domain --title='Welcome to my blog' --admin_user=admin --admin_password=$password_site --admin_email=$email --subdomains  --allow-root
+elif [ "$php_version" = "fpm-wordpress-mu-cache" ] || [ "$php_version" = "fpm-wordpress-mu-cache-users" ] || [ "$php_version" = "fpm-wordpress-mu" ]|| [ "$php_version" = "fpm-wordpress-mu-users" ]; then
+wp core multisite-install  --url=$link://$domain --title='Welcome to my blog' --admin_user=admin --admin_password=$password_site --admin_email=$email --allow-root
+else
+wp core install --url=$link://$domain --title='My Blog' --admin_user=admin --admin_password=$password_site --admin_email=$email --allow-root
+fi
+echo ""
+echo "================================================================================="
+echo ""
+echo "Link to Login WordPress-Admin : $link://$domain/wp-admin"
+echo "Account                       : admin         "
+echo "Password                      : $password_site"
+echo "================================================================================="
+echo ""
+chown -R $user:$user * &> /dev/null
+else
+echo "Sorry, The email you entered appears to be in the wrong format, please try again."
+/etc/quicklemp/menu/app_
+fi
+esac
+/etc/quicklemp/menu/app_

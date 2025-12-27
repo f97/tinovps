@@ -1,0 +1,910 @@
+#!/bin/bash 
+##TinoVPS Script##
+gen_pass() {
+    MATRIX='abcdefghijklmnopqrstuvwxyz'
+    LENGTH=3
+    while [ ${n:=1} -le $LENGTH ]; do
+        PASS="$PASS${MATRIX:$(($RANDOM%${#MATRIX})):1}"
+        let n+=1
+    done
+    echo "$PASS"
+}
+ADD_DOMAIN(){
+clear
+echo ""
+echo "====================================================================================="
+echo "Menu Board > Manage Domains > Add New Domain"
+echo "/-------------------------/"
+echo "- Add New Domain"
+echo "/-----------------------------------------------------------------------------------/"
+echo ""
+echo -n "Pls input domain you need add to VPS (Ex: example.com) and press [ENTER]: " 
+read domain
+domain=$( echo "$domain" | sed "s/ //g" )
+
+regex="^(([a-zA-Z]{1})|([a-zA-Z]{1}[a-zA-Z]{1})|([a-zA-Z]{1}[0-9]{1})|([0-9]{1}[a-zA-Z]{1})|([a-zA-Z0-9][-_\.a-zA-Z0-9]{1,61}[a-zA-Z0-9]))\.([a-zA-Z]{2,13}|[a-zA-Z0-9-]{2,30}\.[a-zA-Z]{2,3})$"
+
+if [[ $domain =~ $regex ]] ; then
+    echo "The system checks that the domain name you have entered is in the correct format."
+else
+echo "Wrong domain name format, returning to main function."
+/etc/quicklemp/menu/domain_
+fi
+if [ "$domain" = "" ]; then
+echo "The domain you entered is not in the correct format, please try again."
+/etc/quicklemp/menu/domain_
+fi
+if [ -f /etc/nginx/conf.d/vhosts/$domain.conf ]; then
+echo "The system check that the domain you just added already exists on the VPS, please check the domain list."
+echo "Please check the list of entire domain names...!"
+/etc/quicklemp/menu/domain_
+fi
+
+ # cd /opt/php/
+
+cd /opt/php/
+number_php=$(ls | wc -l)
+if ! [ 2 -gt "$number_php" ]; then
+prompt="Please select the version of PHP you want to use for the domain name $domain:"
+options=( $(ls -d *) )
+PS3="$prompt "
+
+select opt in "${options[@]}"; do
+    if (( REPLY == 1 + ${#options[@]} )) ; then
+        /etc/quicklemp/menu/domain_
+
+    elif (( REPLY > 0 && REPLY <= ${#options[@]} )) ; then
+		echo $opt
+        break
+
+    else
+        echo "Wrong option, please try again: "
+    fi
+done
+php_dir=$opt
+php_ver=${opt:3}
+else
+# php_dir=1
+php_dir=$(ls -d php*)
+php_ver=${php_dir:3}
+fi
+echo ""
+echo ""
+
+printf "Choose vHost PHP in accordance with the source code you will use:\n"
+prompt="Enter your selection [1-8]: "
+php_version="fpm-wordpress-users"; # Default PHP
+options=("WordPress" "WordPress + WP-Rocket" "WordPress + Fastcgi Cache" "PrestaShop" "Laravel" "OpenCart" "WordPress Multisite SubDomain" "WordPress Multisite SubDirectory" "WordPress Multisite SubDirectory + Fastcgi Cache" "WordPress Multisite SubDomain + Fastcgi Cache" "vHost PHP Mac Dinh")
+PS3="$prompt"
+select opt in "${options[@]}"; do 
+    case "$REPLY" in
+    1) php_version="fpm-wordpress-users"; break;;
+	2) php_version="fpm-wordpress-wprocket-users"; break;;
+    3) php_version="fpm-wordpress-cache-users"; break;;
+    4) php_version="fpm-prestashop-users"; break;;
+    5) php_version="fpm-laravel-users"; break;;
+    6) php_version="fpm-opencart-users"; break;;
+    7) php_version="fpm-wordpress-sub-users"; break;;
+    8) php_version="fpm-wordpress-mu-users"; break;;
+    9) php_version="fpm-wordpress-mu-cache-users"; break;;
+    10) php_version="fpm-wordpress-sub-cache-users"; break;;
+    11) php_version="fpm-default-users"; break;;
+    $(( ${#options[@]}+1 )) ) printf "\nThe system will install the version PHP 7.4\n"; break;;
+    *) printf "You are entering the wrong information, the system will install the version PHP 7.4\n"; break;;
+    esac    
+done
+
+php_tem=$opt
+user1=${domain//./}
+#def=${user1%.*}
+user2=${user1:0:5}
+randomuser=$(gen_pass)
+user="$user2$randomuser"
+
+echo ""
+echo "*************************************************************************"
+echo "*************************************************************************"
+echo ""
+echo "                     SYSTEM INFORMATION WILL INSTALL"
+echo ""
+echo "                  | DOMAIN      : $domain"  
+echo "                  | VERSION PHP : PHP $php_ver"
+echo ""
+echo "*************************************************************************"
+echo "*************************************************************************"
+}
+
+
+ADD_DOMAIN
+
+counter=1
+while [ $counter == 1 ]
+do
+read -r -p "Are you sure?, Press [Y] to Continue and [N] to return.[Y/N] : " response
+response=${response,,}
+if [[ "$response" =~ ^(yes|y)$ ]]
+then
+   break;
+else
+ADD_DOMAIN
+fi
+done
+
+
+
+
+#echo "Nhap lai thong tin bam phim Y hay y hoac yes"
+#echo "Hoac la"
+#read -r -p "Nhan Phim Enter hoac n hay N de tiep tuc[y/N|Enter] " response
+#response=${response,,} 
+#if [[ "$response" =~ ^(yes|y)$ ]]
+#then
+#   echo "Tien hanh khai bao lai thong tin"
+#    ADD_DOMAIN
+#else
+#   clear
+#fi
+
+
+
+echo "Please wait ... The system is proceeding to add the domain $domain into your system..."
+
+sleep 3s;
+
+useradd -M $user &>/dev/null
+mkdir /etc/quicklemp/domains/$domain
+
+mkdir -p /etc/nginx/conf.d/addon_confs/$domain &>/dev/null
+mkdir -p /home/$domain/public_html &>/dev/null
+mkdir -p /home/$domain/logs &>/dev/null
+mkdir -p /home/$domain/ssl &>/dev/null
+mkdir -p /etc/nginx/conf.d/ssl/$domain &>/dev/null
+
+total_ram=$(free -m | awk 'NR==2{print $2}')
+php_ram=40
+pmmax_children=$((total_ram / php_ram))
+pmstart_servers=$((pmmax_children * 10 / 100 + 1))
+pmmin_spare_servers=$((pmmax_children * 5 / 100 + 1))
+pmmax_spare_servers=$((pmmax_children * 20 / 100 + 1))
+pmmax_requests=1500
+
+cat > "$php_dir/etc/php-fpm.d/$domain.conf" <<END
+[$domain]
+listen = /dev/shm/$domain.$php_dir.sock;
+user = $user
+group = $user
+listen.owner = nginx
+listen.group = nginx
+listen.mode = 0644
+pm = ondemand
+pm.max_children = $pmmax_children
+pm.start_servers = $pmstart_servers
+pm.min_spare_servers = $pmmin_spare_servers
+pm.max_spare_servers = $pmmax_spare_servers
+pm.max_requests = $pmmax_requests
+END
+
+cat > "/etc/quicklemp/domains/$domain/user" <<END
+$user
+END
+
+cat > "/etc/quicklemp/domains/$domain/php_dir" <<END
+$php_dir
+END
+cat > "/etc/quicklemp/domains/$domain/page_speed" <<END
+no
+END
+
+cat > "/etc/quicklemp/domains/$domain/php_version" <<END
+$php_version
+END
+
+
+cp -r /etc/nginx/conf.d/custom/$php_version.conf /etc/nginx/conf.d/addon_confs/$domain/$php_version.conf 
+cp -r /etc/nginx/conf.d/custom/restrictions-users.conf /etc/nginx/conf.d/addon_confs/$domain/restrictions-users.conf
+
+cat > "/etc/quicklemp/domains/$domain/php_tem" <<END
+$php_tem
+END
+ 
+ openssl req -x509 -nodes -new -sha256 -days 1024 -newkey rsa:2048 -keyout /etc/nginx/conf.d/ssl/$domain/privkey.key -out /etc/nginx/conf.d/ssl/$domain/chain.pem -subj "/C=US/CN=$domain" &>/dev/null
+ openssl x509 -outform pem -in /etc/nginx/conf.d/ssl/$domain/chain.pem -out /etc/nginx/conf.d/ssl/$domain/fullchain.crt &>/dev/null
+
+cat > "/home/$domain/public_html/index.html" <<END
+<!doctype html>
+<html>
+  <head>
+    <title>This is the title of the webpage!</title>
+  </head>
+  <body>
+    <p>This is an example paragraph. Anything in the <strong>body</strong> tag will appear on the page, just like this <strong>p</strong> tag and its contents.</p>
+  </body>
+</html>
+END
+
+   # chown $user:$user /home/$user/$domain
+    chown -R $user:$user /home/$domain/public_html
+    
+    domain_alias="www.$domain"
+    if [[ $domain == *www* ]]; then
+	    domain_alias=${domain/www./''}
+    fi
+    cat > "/etc/nginx/conf.d/vhosts/$domain.conf" <<END
+server {
+        listen 80;
+        server_name $domain $domain_alias;
+        root /home/$domain/public_html;
+
+	    access_log /home/$domain/logs/access_log main;
+	    error_log /home/$domain/logs/error_log warn;
+
+        if (\$bad_bot) { return 444; }
+        set \$fpmuser $domain.$php_dir;
+		include conf.d/addon_confs/$domain/*.conf;
+		include conf.d/custom/wp-rocket.conf;
+}
+
+END
+
+ cat > "/etc/nginx/conf.d/vhosts/$domain.ssl.conf" <<END
+server {
+        listen 443 ssl http2;
+        server_name $domain $domain_alias;
+        root /home/$domain/public_html;
+		
+	    access_log /home/$domain/logs/access_ssl_log main;
+	    error_log /home/$domain/logs/error_ssl_log warn;
+
+        if (\$bad_bot) { return 444; }
+        set \$fpmuser $domain.$php_dir;
+
+        include conf.d/ssl/$domain/ssl.conf;
+        include conf.d/addon_confs/$domain/*.conf;
+		include conf.d/custom/wp-rocket.conf;
+}
+END
+cat > "/etc/nginx/conf.d/ssl/$domain/ssl.conf" <<END
+ssl_certificate /etc/nginx/conf.d/ssl/$domain/fullchain.crt;
+ssl_certificate_key /etc/nginx/conf.d/ssl/$domain/privkey.key;
+#ssl_trusted_certificate /etc/nginx/conf.d/ssl/$domain/chain.pem;
+ssl_dhparam /etc/nginx/dhparam.pem;
+ssl_session_timeout 4h;
+ssl_session_cache shared:SSL:20m;
+ssl_session_tickets off;
+ssl_protocols TLSv1.2 TLSv1.3;
+ssl_prefer_server_ciphers on;
+#ssl_ecdh_curve X25519:P-256:P-384:P-224:P-521;
+ssl_buffer_size 1400;
+#ssl_stapling on;
+ssl_stapling_verify on;
+#ssl_trusted_certificate /etc/nginx/conf.d/ssl/$domain/chain.pem;
+resolver 1.1.1.1 8.8.8.8 valid=300s;
+resolver_timeout 5s;
+add_header Strict-Transport-Security "max-age=63072000; includeSubdomains; preload";
+#add_header X-Frame-Options SAMEORIGIN;
+add_header X-Content-Type-Options nosniff;
+
+## Modern compatibility
+ssl_ciphers TLS13-AES-128-GCM-SHA256:TLS13-AES-256-GCM-SHA384:TLS13-CHACHA20-POLY1305-SHA256:ECDHE-ECDSA-AES256-GCM-SHA384:ECDHE-RSA-AES256-GCM-SHA384:ECDHE-ECDSA-CHACHA20-POLY1305:ECDHE-RSA-CHACHA20-POLY1305:ECDHE-ECDSA-AES256-SHA384:ECDHE-RSA-AES256-SHA384;
+
+## Intermediate compatibility
+#ssl_ciphers TLS13-AES-128-GCM-SHA256:TLS13-AES-256-GCM-SHA384:TLS13-CHACHA20-POLY1305-SHA256:ECDHE-ECDSA-CHACHA20-POLY1305:ECDHE-RSA-CHACHA20-POLY1305:ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-RSA-AES128-GCM-SHA256:ECDHE-ECDSA-AES256-GCM-SHA384:ECDHE-RSA-AES256-GCM-SHA384:DHE-RSA-AES128-GCM-SHA256:DHE-RSA-AES256-GCM-SHA384:ECDHE-ECDSA-AES128-SHA256:ECDHE-RSA-AES128-SHA256:ECDHE-ECDSA-AES128-SHA:ECDHE-RSA-AES256-SHA384:ECDHE-RSA-AES128-SHA:ECDHE-ECDSA-AES256-SHA384:ECDHE-ECDSA-AES256-SHA:ECDHE-RSA-AES256-SHA:DHE-RSA-AES128-SHA256:DHE-RSA-AES128-SHA:DHE-RSA-AES256-SHA256:DHE-RSA-AES256-SHA:ECDHE-ECDSA-DES-CBC3-SHA:ECDHE-RSA-DES-CBC3-SHA:EDH-RSA-DES-CBC3-SHA:AES128-GCM-SHA256:AES256-GCM-SHA384:AES128-SHA256:AES256-SHA256:AES128-SHA:AES256-SHA:DES-CBC3-SHA:!DSS;
+
+## Old backward compatibility
+#ssl_ciphers ECDHE-ECDSA-CHACHA20-POLY1305:ECDHE-RSA-CHACHA20-POLY1305:ECDHE-RSA-AES128-GCM-SHA256:ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-RSA-AES256-GCM-SHA384:ECDHE-ECDSA-AES256-GCM-SHA384:DHE-RSA-AES128-GCM-SHA256:DHE-DSS-AES128-GCM-SHA256:kEDH+AESGCM:ECDHE-RSA-AES128-SHA256:ECDHE-ECDSA-AES128-SHA256:ECDHE-RSA-AES128-SHA:ECDHE-ECDSA-AES128-SHA:ECDHE-RSA-AES256-SHA384:ECDHE-ECDSA-AES256-SHA384:ECDHE-RSA-AES256-SHA:ECDHE-ECDSA-AES256-SHA:DHE-RSA-AES128-SHA256:DHE-RSA-AES128-SHA:DHE-DSS-AES128-SHA256:DHE-RSA-AES256-SHA256:DHE-DSS-AES256-SHA:DHE-RSA-AES256-SHA:ECDHE-RSA-DES-CBC3-SHA:ECDHE-ECDSA-DES-CBC3-SHA:EDH-RSA-DES-CBC3-SHA:AES128-GCM-SHA256:AES256-GCM-SHA384:AES128-SHA256:AES256-SHA256:AES128-SHA:AES256-SHA:AES:DES-CBC3-SHA:HIGH:SEED:!aNULL:!eNULL:!EXPORT:!DES:!RC4:!MD5:!PSK:!RSAPSK:!aDH:!aECDH:!EDH-DSS-DES-CBC3-SHA:!KRB5-DES-CBC3-SHA:!SRP;
+END
+
+server_ip=$(dig -4 TXT +short o-o.myaddr.l.google.com @ns1.google.com | sed -e 's/\"//g')
+	ip=$(dig +short $domain @resolver1.opendns.com | tail -1)
+    wwwdomain=www.$domain
+    wwwip=$(dig +short $wwwdomain @resolver1.opendns.com | tail -1)
+	
+echo "$domain point to IP: $ip"
+echo "$wwwdomain point to IP: $wwwip"
+
+if [ "$ip" = "$server_ip" ] || [ "$wwwip" = "$server_ip" ]; then
+    nginx -s reload
+    service php-fpm-$php_ver restart &>/dev/null
+
+echo ""
+echo "$domain has been returned to VPS, installation is in progress SSL Let's Encrypt:"
+sleep 2
+	if [ "$ip" = "$server_ip" ]; then
+		if [ "$wwwip" = "$server_ip" ]; then
+			echo "Setup letenscrypt for $domain ... and $wwwdomain "
+			/root/.acme.sh/acme.sh  --issue -w /home/$domain/public_html/ -d $domain -d $wwwdomain -k 4096 --server letsencrypt				
+				if [ -f /root/.acme.sh/$domain/$domain.cer ]; then
+					echo "Installing SSL for domain $domain, $wwwdomain"
+					/root/.acme.sh/acme.sh --installcert -d $domain --keypath /etc/nginx/conf.d/ssl/$domain/privkey.key --fullchainpath /etc/nginx/conf.d/ssl/$domain/fullchain.crt --debug
+					echo "SSL installation is completed."
+				else
+					echo "SSL settings encountered an error, please check again."
+				fi		
+		else		
+			echo "Setup Let's Enscrypt for $domain ... no record exists $wwwdomain "			
+			/root/.acme.sh/acme.sh  --issue -w /home/$domain/public_html/ -d $domain -k 4096 --server letsencrypt
+			if [ -f /root/.acme.sh/$domain/$domain.cer ]; then
+				echo "Installing SSL for domain $domain ."
+				/root/.acme.sh/acme.sh --installcert -d $domain --keypath /etc/nginx/conf.d/ssl/$domain/privkey.key --fullchainpath /etc/nginx/conf.d/ssl/$domain/fullchain.crt --debug
+				echo "SSL installation is completed."
+			else
+				echo "SSL settings encountered an error, please check again."
+			fi
+		fi
+	else
+	    if [ "$wwwip" = "$server_ip" ]; then
+		    read -r -p "$wwwdomain pointing to the VPS IP, $domain has not been returned to IP VPS, You still want to personalize it $wwwdomain ? [y/N] " response
+            case $response in
+                [yY][eE][sS]|[yY])
+				
+				echo "Setup Let's Enscrypt for $wwwdomain ... "
+				/root/.acme.sh/acme.sh  --issue -w /home/$domain/public_html/ -d $wwwdomain -k 4096 --server letsencrypt
+				if [ -f /root/.acme.sh/$domain/$domain.cer ]; then
+					echo "Installing SSL for domain $domain"
+					/root/.acme.sh/acme.sh --installcert -d $domain --keypath /etc/nginx/conf.d/ssl/$domain/privkey.key --fullchainpath /etc/nginx/conf.d/ssl/$domain/fullchain.crt --debug
+					echo "SSL installation is complete."
+				else
+					echo "SSL settings encountered an error, please check again."
+				fi
+			esac
+		fi
+	echo "$domain, $wwwdomain has not been returned to IP VPS."		
+	fi	
+
+
+fi
+
+ ##################################################
+
+aliase_file="/etc/quicklemp/domains/$domain/aliase"
+if [ -f "$aliase_file" ]; then
+    aliase_domain=$(<"$aliase_file")
+else
+    aliase_domain=""
+fi
+
+if [[ -n $aliase_domain && -f "/etc/nginx/conf.d/vhosts/${aliase_domain}.conf" ]]; then
+    sed -i "s/$domain\/public_html;/$aliase_domain\/public_html;/g" /etc/nginx/conf.d/vhosts/$domain.ssl.conf
+    sed -i "s/$domain\/public_html;/$aliase_domain\/public_html;/g" /etc/nginx/conf.d/vhosts/$domain.conf
+	
+fi
+
+if ! systemctl is-active --quiet monit; then
+yum install monit -y  &>/dev/null
+
+rm -rf /etc/monit.d/*
+cat > "/etc/monit.d/logging" <<END
+# log to monit.log
+set logfile /var/log/monit.log
+END
+fi
+
+
+cat > "/etc/monit.d/disk" <<END
+check device rootfs with path /
+  if space usage > 98% then exec "/bin/bash -c '/usr/bin/find /var/log/messages-* /home/*/logs/access_*.gz /home/*/logs/error_*.gz -delete'"
+END
+cat > "/etc/monit.d/mysql" <<END
+check process mysql with pidfile /var/lib/mysql/sv.pid
+  start program = "/usr/bin/systemctl start mysql"
+  stop program  = "/usr/bin/systemctl stop mysql"
+  if 5 restarts within 5 cycles then timeout
+END
+cat > "/etc/monit.d/nginx" <<END
+check process nginx with pidfile /var/run/nginx.pid
+  start program = "/usr/bin/systemctl start nginx"
+  stop program  = "/usr/bin/systemctl stop nginx"
+END
+
+
+for dir in /opt/php/php*; do
+  if [ -d "$dir" ]; then
+    php="${dir##*/}"
+    php_ver="${php:3}"
+    php_full="php-fpm-${php_ver}"
+
+    cat > "/etc/monit.d/php$php_ver" <<END
+check process php$php_ver with pidfile /opt/php/php$php_ver/var/run/php-fpm.pid
+  start program = "/usr/bin/systemctl start $php_full"
+  stop program = "/usr/bin/systemctl stop $php_full"
+END
+  fi
+done
+systemctl restart monit
+systemctl enable monit
+
+nginx -s reload  &>/dev/null
+
+##################################################
+
+	
+    service php-fpm-$php_ver restart &>/dev/null
+echo ""
+echo "Congratulations, domain $domain Your has been successfully added on the system.!"
+echo ""
+echo "You can install source code for domain $domain at directory : /home/$domain/public_html/"
+echo ""
+echo ""
+
+
+###
+
+if [ "$php_version" = "fpm-laravel-users" ]; then
+
+gen_pass() {
+    MATRIX='0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz'
+    LENGTH=16
+    while [ ${n:=1} -le $LENGTH ]; do
+        PASS="$PASS${MATRIX:$(($RANDOM%${#MATRIX})):1}"
+        let n+=1
+    done
+    echo "$PASS"
+}
+gen_user() {
+    MATRIX='abcdefghijklmnopqrstuvwxyz'
+    LENGTH=6
+    while [ ${n:=1} -le $LENGTH ]; do
+        PASS="$PASS${MATRIX:$(($RANDOM%${#MATRIX})):1}"
+        let n+=1
+    done
+    echo "$PASS"
+}
+
+sed -i "s/$domain\/public_html;/$domain\/public_html\/public;/g" /etc/nginx/conf.d/vhosts/$domain.ssl.conf
+sed -i "s/$domain\/public_html;/$domain\/public_html\/public;/g" /etc/nginx/conf.d/vhosts/$domain.conf
+
+
+if [[ ! -f "/usr/bin/composer" ]]; then
+	echo "Install Composer..."
+	sleep 1
+	cd
+	php -r "copy('https://getcomposer.org/installer', 'composer-setup.php');"
+	php -d memory_limit=-1 composer-setup.php
+	php -r "unlink('composer-setup.php');"
+	mv composer.phar  /usr/bin/composer
+	clear
+fi
+
+cd /home/$domain/public_html/
+
+read -r -p "do you want install sourcode Lavarel for $domain , press Y to continue ?.[y/N]: " response
+case $response in
+    [yY][eE][sS]|[yY])
+
+rm -rf /home/$domain/public_html/* &> /dev/null
+rm -rf /home/$domain/public_html/.* &> /dev/null
+rm -rf /var/lib/nginx/cache/fastcgi/* &> /dev/null
+
+composer create-project --prefer-dist laravel/laravel ./
+chown -R $user:$user /home/$domain/public_html/
+mv /home/$domain/public_html/.env.example  /home/$domain/public_html/.env
+ali_user=$(gen_user)
+password=$(gen_pass)
+password_site=$(gen_pass)
+dataname="${user}_${ali_user}"
+username="${user}_${ali_user}"
+
+
+mysql -e "CREATE DATABASE IF NOT EXISTS $dataname"
+mysql -e "CREATE USER IF NOT EXISTS '$username'@'localhost' IDENTIFIED BY '$password'"
+mysql -e "GRANT ALL PRIVILEGES ON $dataname.* TO '$username'@'localhost'"
+mysql -e "FLUSH PRIVILEGES"
+
+echo ""
+echo "The system created Database with the name $dataname success !."
+echo "================================================================================="
+echo ""
+echo "Information detail for Database:"
+printf "Database Name: $dataname\nDatabase User: $username\nDatabase Password: $password\n\n"
+echo "================================================================================="
+cd /home/$domain/public_html/
+
+
+sed -i "s/APP_ENV=local/APP_ENV=production/g" /home/$domain/public_html/.env
+sed -i "s/DB_DATABASE=laravel/DB_DATABASE=$dataname/g" /home/$domain/public_html/.env
+sed -i "s/DB_USERNAME=root/DB_USERNAME=$username/g" /home/$domain/public_html/.env
+sed -i "s/DB_PASSWORD=/DB_PASSWORD=$password/g" /home/$domain/public_html/.env
+
+sed -i "s/$domain\/public_html;/$domain\/public_html\/public;/g" /etc/nginx/conf.d/vhosts/$domain.ssl.conf
+sed -i "s/$domain\/public_html;/$domain\/public_html\/public;/g" /etc/nginx/conf.d/vhosts/$domain.conf
+
+
+##################################################
+
+aliase_file="/etc/quicklemp/domains/$domain/aliase"
+if [ -f "$aliase_file" ]; then
+    aliase_domain=$(<"$aliase_file")
+else
+    aliase_domain=""
+fi
+
+if [[ -n $aliase_domain && -f "/etc/nginx/conf.d/vhosts/${aliase_domain}.conf" ]]; then
+    sed -i "s/$domain\/public_html;/$aliase_domain\/public_html;/g" /etc/nginx/conf.d/vhosts/$domain.ssl.conf
+    sed -i "s/$domain\/public_html;/$aliase_domain\/public_html;/g" /etc/nginx/conf.d/vhosts/$domain.conf
+	
+fi
+
+if ! systemctl is-active --quiet monit; then
+yum install monit -y  &>/dev/null
+
+rm -rf /etc/monit.d/*
+cat > "/etc/monit.d/logging" <<END
+# log to monit.log
+set logfile /var/log/monit.log
+END
+fi
+
+cat > "/etc/monit.d/disk" <<END
+check device rootfs with path /
+  if space usage > 98% then exec "/bin/bash -c '/usr/bin/find /var/log/messages-* /home/*/logs/access_*.gz /home/*/logs/error_*.gz -delete'"
+END
+cat > "/etc/monit.d/mysql" <<END
+check process mysql with pidfile /var/lib/mysql/sv.pid
+  start program = "/usr/bin/systemctl start mysql"
+  stop program  = "/usr/bin/systemctl stop mysql"
+  if 5 restarts within 5 cycles then timeout
+END
+cat > "/etc/monit.d/nginx" <<END
+check process nginx with pidfile /var/run/nginx.pid
+  start program = "/usr/bin/systemctl start nginx"
+  stop program  = "/usr/bin/systemctl stop nginx"
+END
+
+
+for dir in /opt/php/php*; do
+  if [ -d "$dir" ]; then
+    php="${dir##*/}"
+    php_ver="${php:3}"
+    php_full="php-fpm-${php_ver}"
+
+    cat > "/etc/monit.d/php$php_ver" <<END
+check process php$php_ver with pidfile /opt/php/php$php_ver/var/run/php-fpm.pid
+  start program = "/usr/bin/systemctl start $php_full"
+  stop program = "/usr/bin/systemctl stop $php_full"
+END
+  fi
+done
+systemctl restart monit
+systemctl enable monit
+
+nginx -s reload  &>/dev/null
+
+##################################################
+
+
+service php-fpm-$php_ver restart &>/dev/null
+
+echo ""
+echo "================================================================================="
+echo ""
+echo "Link to web : http://$domain"
+echo ""
+echo "================================================================================="
+echo ""
+chown -R $user:$user * &> /dev/null
+/etc/quicklemp/menu/domain_
+	;;
+ *)
+read -r -p "do you want auto create 1 database, press Y to continue ?.[y/N]: " response
+case $response in
+    [yY][eE][sS]|[yY])
+/etc/quicklemp/menu/database/tao-database
+esac
+/etc/quicklemp/menu/domain_
+ ;;
+esac
+fi
+
+###
+
+
+###
+
+
+
+if [ "$php_version" = "fpm-opencart-users" ]; then
+	# COLORS
+	Cyan='\033[0;36m'         # Cyan
+	Green='\033[0;32m'        # Green
+	Red='\033[0;31m'          # Red
+	BCyan='\033[1;36m'        # Bold Cyan
+	Color_Off='\033[0m'       # Text Reset
+
+
+gen_pass() {
+    MATRIX='0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz'
+    LENGTH=16
+    while [ ${n:=1} -le $LENGTH ]; do
+        PASS="$PASS${MATRIX:$(($RANDOM%${#MATRIX})):1}"
+        let n+=1
+    done
+    echo "$PASS"
+}
+gen_user() {
+    MATRIX='abcdefghijklmnopqrstuvwxyz'
+    LENGTH=6
+    while [ ${n:=1} -le $LENGTH ]; do
+        PASS="$PASS${MATRIX:$(($RANDOM%${#MATRIX})):1}"
+        let n+=1
+    done
+    echo "$PASS"
+}
+
+	checkVersion() {
+		# check if version provided is a valid OpenCart release
+		version_list=("3.0.3.6" "3.0.2.0" "3.0.1.2" "3.0.1.1" "3.0.0.0" "2.3.0.2" "2.3.0.1" "2.3.0.0" "2.2.0.0" "2.1.0.2" "2.1.0.1" "2.0.3.1" "2.0.2.0" "2.0.1.1" "2.0.1.0" "2.0.0.0" "1.5.6.4" "1.5.6.3" "1.5.6.2" "1.5.6.1" "1.5.6")
+
+		match=0
+		for v in "${version_list[@]}"
+		do
+			if [[ $v = "$VERSION" ]]; then
+				match=1
+				break
+			fi
+		done
+	}
+
+	setInstallPermissions() {
+		# Set install permissions for files and folders
+		chmod 777 config.php
+		chmod 777 admin/config.php
+		chmod -R 777 image/
+		chmod -R 777 image/cache/
+		chmod -R 777 image/catalog/
+		chmod -R 777 system/storage/cache/
+		chmod -R 777 system/storage/logs/
+		chmod -R 777 system/storage/download/
+		chmod -R 777 system/storage/upload/
+		chmod -R 777 system/storage/modification/
+	}
+
+	secureInstallation() {
+		# delete install folder
+		if [ -d "install/" ]; then
+			echo -e "${Cyan} Deleting install/ folder.. ${Color_Off}"
+			rm -rf install
+		fi
+
+		# To change all the directories to 755 (-rwxr-xr-x)
+		echo -e "${Cyan} Setting permissions for all directories to 755.. ${Color_Off}"
+		find . -type d -exec chmod 755 {} \;
+
+		# To change all the files to 644 (-rw-r--r--):
+		echo -e "${Cyan} Setting permissions for all files to 644.. ${Color_Off}"
+		find . -type f -exec chmod 644 {} \;
+
+		# set 444 for admin files
+		echo -e "${Cyan} Setting secure 444 permissions for admin files.. ${Color_Off}"	
+		chmod 444 config.php
+		chmod 444 admin/config.php
+		chmod 444 index.php
+		chmod 444 admin/index.php
+		chmod 444 system/startup.php
+
+		# set 777 for cache
+		echo -e "${Cyan} Setting 777 permissions for cache folders.. ${Color_Off}"	
+		chmod 777 image/cache/
+		chmod 777 system/storage/cache/
+	}
+
+	installOpenCart() {
+		# Download files for that version from Github
+		echo -e "${Cyan} Downloading files.. ${Color_Off}"
+		if [[ $VERSION = "3.0.3.6" ]]; then
+		wget https://github.com/tinopanel/tino/raw/master/opencart-3.0.3.6.zip
+		unzip opencart-3.0.3.6.zip &>/dev/null
+		rm -rf opencart-3.0.3.6.zip
+		else
+		wget -O opencart-$VERSION.zip https://github.com/opencart/opencart/archive/${VERSION}.tar.gz
+		echo -e "${Cyan} Extracting.. ${Color_Off}"
+		tar xzf opencart-$VERSION.zip &>/dev/null
+		
+		echo -e "${Cyan} Cleaning up.. ${Color_Off}"
+		mv opencart-$VERSION/* .
+		fi
+		rm -rf opencart-$VERSION.zip opencart-$VERSION # delete downloaded source files
+		mv upload/* . # move all files out of the uploads folder to current dir
+		mv upload/.htaccess.txt ./.htaccess # move and rename .htaccess
+		rm -rf upload # delete the now empty upload dir
+		rm -rf install.txt license.txt # delete unnecessary files
+		cp config-dist.php config.php # rename config files
+		cp admin/config-dist.php admin/config.php
+		
+		# Set install permissions for files and folders
+		setInstallPermissions
+
+		echo -e "${Cyan} Opencart was successfully copied. Please run the install script to finish installation. \n
+	 http://$domain/install \n ${Color_Off}"
+		return 1
+	}
+
+	cd /home/$domain/public_html/
+
+	read -r -p "do you want auto install Source code OpenCart For $domain ?.[y/N]: " response
+	case $response in
+		[yY][eE][sS]|[yY])
+
+	cd /home/$domain/public_html/
+	rm -rf /home/$domain/public_html/*
+
+echo "Version OpenCart You can install:"
+version_list=("3.0.3.6" "3.0.2.0" "3.0.1.2" "3.0.1.1" "3.0.0.0" "2.3.0.2" "2.3.0.1" "2.3.0.0" "2.2.0.0" "2.1.0.2" "2.1.0.1" "2.0.3.1" "2.0.2.0" "2.0.1.1" "2.0.1.0" "2.0.0.0" "1.5.6.4" "1.5.6.3" "1.5.6.2" "1.5.6.1" "1.5.6")
+for k in "${version_list[@]}"
+do
+echo $k;
+done
+
+	# Ask for version
+	echo -ne "${Cyan} Input version you want install? (for example: ${BCyan}1.5.6.4${Cyan} or ${BCyan}3.0.2.0${Cyan})${Color_Off}"
+	read VERSION
+
+	checkVersion
+
+	if [[ $match = 0 ]]; then
+		echo -e "${Red} Not a valid OpenCart version. Exiting.. ${Color_Off}"
+		sleep 3
+		/etc/quicklemp/menu/domain_
+	fi
+
+	if [[ $match = 1 ]]; then
+		installOpenCart
+	fi
+	
+#secureInstallation
+echo -e "${Green}\n ALL DONE! Enjoy.. \n ${Color_Off}"
+
+ali_user=$(gen_user)
+password=$(gen_pass)
+password_site=$(gen_pass)
+dataname="${user}_${ali_user}"
+username="${user}_${ali_user}"
+
+
+mysql -e "CREATE DATABASE IF NOT EXISTS $dataname"
+mysql -e "CREATE USER IF NOT EXISTS '$username'@'localhost' IDENTIFIED BY '$password'"
+mysql -e "GRANT ALL PRIVILEGES ON $dataname.* TO '$username'@'localhost'"
+mysql -e "FLUSH PRIVILEGES"
+
+echo ""
+echo "The system created Database with the name $dataname success !."
+echo "================================================================================="
+echo ""
+echo "Information detail for Database:"
+printf "Database Name: $dataname\nDatabase User: $username\nDatabase Password: $password\n\n"
+echo "================================================================================="
+nginx -s reload &>/dev/null
+service php-fpm-$php_ver restart &>/dev/null
+
+	chown -R $user:$user /home/$domain/public_html/
+	sleep 3	
+/etc/quicklemp/menu/domain_
+	;;
+ *)
+read -r -p "do you want auto create 1 database, press Y to continue ?.[y/N]: " response
+case $response in
+    [yY][eE][sS]|[yY])
+/etc/quicklemp/menu/database/tao-database
+esac
+/etc/quicklemp/menu/domain_
+ ;;
+esac
+fi
+
+###
+
+
+
+read -r -p "do you want install sourcode Wordpress for $domain , press Y to continue ?.[y/N]: " response
+case $response in
+    [yY][eE][sS]|[yY])
+rm -rf /home/$domain/public_html/index.html
+
+###
+
+
+gen_pass() {
+    MATRIX='0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz'
+    LENGTH=16
+    while [ ${n:=1} -le $LENGTH ]; do
+        PASS="$PASS${MATRIX:$(($RANDOM%${#MATRIX})):1}"
+        let n+=1
+    done
+    echo "$PASS"
+}
+gen_user() {
+    MATRIX='abcdefghijklmnopqrstuvwxyz'
+    LENGTH=6
+    while [ ${n:=1} -le $LENGTH ]; do
+        PASS="$PASS${MATRIX:$(($RANDOM%${#MATRIX})):1}"
+        let n+=1
+    done
+    echo "$PASS"
+}
+cd /etc/quicklemp/domains/
+php_version=$(</etc/quicklemp/domains/$domain/php_version)
+
+cd /home/$domain/public_html/
+echo ""
+echo ""
+regex="^([A-Za-z]+[A-Za-z0-9]*((\.|\-|\_)?[A-Za-z]+[A-Za-z0-9]*){1,})@(([A-Za-z]+[A-Za-z0-9]*)+((\.|\-|\_)?([A-Za-z]+[A-Za-z0-9]*)+){1,})+\.([A-Za-z]{2,})+"
+echo -n "Please enter the Management Email for domain name $domain [ENTER]: "
+read email
+
+if [[ $email =~ $regex ]] ; then
+    echo ""
+if [ "$email" = "" ]; then
+echo "It looks like you were typing it wrong, please try again."
+/etc/quicklemp/menu/app_
+fi
+read -r -p "Do you want to use the Website with HTTPS protocol? ?. [y/N]: " response
+if [[ "$response" =~ ^([yY][eE][sS]|[yY])$ ]]
+then
+    link="https"
+else
+    link="http"
+fi
+echo $link
+
+cd /home/$domain/public_html/
+rm -rf *
+rm -rf /var/lib/nginx/cache/fastcgi/*
+wp core download --version=latest --allow-root
+chown -R $user:$user *
+ali_user=$(gen_user)
+password=$(gen_pass)
+password_site=$(gen_pass)
+
+if [[ $user == *['!'@#\$%^\&*()_+-]* ]]
+then
+dataname=$(gen_user)
+username=$dataname
+else
+dataname="${user}_${ali_user}"
+username="${user}_${ali_user}"
+fi
+
+
+mysql -e "CREATE DATABASE IF NOT EXISTS $dataname"
+mysql -e "CREATE USER IF NOT EXISTS '$username'@'localhost' IDENTIFIED BY '$password'"
+mysql -e "GRANT ALL PRIVILEGES ON $dataname.* TO '$username'@'localhost'"
+mysql -e "FLUSH PRIVILEGES"
+echo ""
+echo "The system created Database with the name $dataname success !."
+echo "================================================================================="
+echo ""
+echo "Information detail for Database:"
+printf "Database Name: $dataname\nDatabase User: $username\nDatabase Password: $password\n\n"
+echo "================================================================================="
+cd /home/$domain/public_html/
+wp config create  --dbname=$dataname --dbuser=$username --dbpass=$password --allow-root
+if [ "$php_version" = "fpm-wordpress-sub-cache" ] || [ "$php_version" = "fpm-wordpress-sub-cache-users" ] || [ "$php_version" = "fpm-wordpress-sub" ]|| [ "$php_version" = "fpm-wordpress-sub-users" ]; then
+wp core multisite-install  --url=$link://$domain --title='Welcome to my blog' --admin_user=admin --admin_password=$password_site --admin_email=$email --subdomains  --allow-root
+elif [ "$php_version" = "fpm-wordpress-mu-cache" ] || [ "$php_version" = "fpm-wordpress-mu-cache-users" ] || [ "$php_version" = "fpm-wordpress-mu" ]|| [ "$php_version" = "fpm-wordpress-mu-users" ]; then
+wp core multisite-install  --url=$link://$domain --title='Welcome to my blog' --admin_user=admin --admin_password=$password_site --admin_email=$email --allow-root
+else
+wp core install --url=$link://$domain --title='My Blog' --admin_user=admin --admin_password=$password_site --admin_email=$email --allow-root
+fi
+echo ""
+echo "================================================================================="
+echo ""
+echo "Link to Login WordPress-Admin : $link://$domain/wp-admin"
+echo "Account                       : admin         "
+echo "Password                      : $password_site"
+echo "================================================================================="
+echo ""
+chown -R $user:$user * &> /dev/null
+else
+echo "Sorry, The email you entered appears to be in the wrong format, not install wordpress and exit"
+/etc/quicklemp/menu/domain_
+fi
+/etc/quicklemp/menu/domain_
+
+####
+esac
+
+read -r -p "do you want auto create 1 database, press Y to continue ?.[y/N]: " response
+case $response in
+    [yY][eE][sS]|[yY])
+/etc/quicklemp/menu/database/tao-database
+esac
+/etc/quicklemp/menu/domain_

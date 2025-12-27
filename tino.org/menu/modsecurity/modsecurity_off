@@ -1,0 +1,47 @@
+# @author: Nguyen Van Phong from TinoHost
+# @website:  https://tinohost.com, https://kienthuclinux.com
+# @since: 2020
+echo ""
+echo "====================================================================================="
+echo "Menu Board > Manage modsecurity > Turn Off modsecurity"
+echo "/-------------------------/"
+echo "- Turn Off modsecurity"
+echo "/-----------------------------------------------------------------------------------/"
+
+cd /etc/quicklemp/domains/
+
+prompt="Select the domain name you want to disable modsecurity $domain:"
+options=( $(ls -d *) )
+PS3="$prompt "
+
+select opt in "${options[@]}" "Thoat." ; do
+    if (( REPLY == 1 + ${#options[@]} )) ; then
+        /etc/quicklemp/menu/pagespeed_
+
+    elif (( REPLY > 0 && REPLY <= ${#options[@]} )) ; then
+                echo $opt
+        break
+
+    else
+        echo "Wrong option, please try again: "
+    fi
+done
+
+check_mod=$(nginx -V 2>&1 | tr ' ' '\n' | grep 'ModSecurity-nginx')
+if [ "$check_mod" == "" ]; then
+echo "Modsecurity Not Install for VPS, PLs Update Nginx Before..!"
+echo " Menu tino --> 5) Manage Setting Nginx --> 1) Update installed NginX"
+sleep 5
+exit
+fi
+
+
+mod_security=$(</etc/quicklemp/domains/$opt/mod_security) &>/dev/null
+echo "no" > /etc/quicklemp/domains/$opt/mod_security; &>/dev/null 
+
+sed -i '/modsecurity\ /s/on/off/' /etc/nginx/conf.d/addon_confs/$opt/modsecurity.conf &>/dev/null
+
+nginx -s reload
+echo "Turned off Modsecurity for domain $opt success."
+
+/etc/quicklemp/menu/modsecurity_

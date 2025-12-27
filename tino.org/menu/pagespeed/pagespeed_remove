@@ -1,0 +1,43 @@
+# @author: Nguyen Van Phong from TinoHost
+# @website:  https://tinohost.com, https://kienthuclinux.com
+# @since: 2020
+echo ""
+echo "====================================================================================="
+echo "Menu Board > Manage Google PageSpeed > Turn Off Google PageSpeed"
+echo "/-------------------------/"
+echo "- Turn Off Google PageSpeed"
+echo "/-----------------------------------------------------------------------------------/"
+
+echo ""
+
+cd /etc/quicklemp/domains/
+
+prompt="Select the domain name you want to turn off Google PageSpeed $domain:"
+options=( $(ls -d *) )
+PS3="$prompt "
+select opt in "${options[@]}" "Thoat." ; do
+    if (( REPLY == 1 + ${#options[@]} )) ; then
+        /etc/quicklemp/menu/pagespeed_
+
+    elif (( REPLY > 0 && REPLY <= ${#options[@]} )) ; then
+                echo $opt
+        break
+
+    else
+        echo "Wrong option, please try again: "
+    fi
+done
+
+page_speed=$(</etc/quicklemp/domains/$opt/page_speed)
+
+if [ "$page_speed" == "yes" ]; then
+
+echo "no" > /etc/quicklemp/domains/$opt/page_speed;
+rm -rf /etc/nginx/conf.d/addon_confs/$opt/page_speed.conf
+nginx -s reload
+
+echo "Turned off Google PageSpeed for domain $opt success."
+else
+    echo "Google PageSpeed has been disable on your domain."
+fi
+/etc/quicklemp/menu/pagespeed_

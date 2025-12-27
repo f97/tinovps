@@ -1,0 +1,17 @@
+echo "========================================================================="
+echo "Quan Ly Firewall"
+echo "========================================================================="
+
+echo -n "Pls input IP you want UNBLOCK  and press [ENTER]: "
+read remote_ip
+
+regex="^((25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$"
+if [[ $remote_ip =~ $regex ]] ; then
+csf -dr $remote_ip
+echo "UNBLOCK IP $remote_ip success!"
+else
+echo "Wrong IP  format, returning to main function."
+/etc/quicklemp/menu/csf_
+fi
+
+/etc/quicklemp/menu/csf_

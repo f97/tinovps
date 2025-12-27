@@ -1,0 +1,76 @@
+# @author: Nguyen Van Phong from TinoHost
+# @website:  https://tinohost.com, https://kienthuclinux.com
+# @since: 2020
+echo ""
+echo "====================================================================================="
+echo "Menu Board > Manage ddos-mitigation > Turn On ddos-mitigation"
+echo "/-------------------------/"
+echo "- Turn On ddos-mitigation"
+echo "/-----------------------------------------------------------------------------------/"
+
+cd /etc/quicklemp/domains/
+
+prompt="Select the domain name you want to enable ddos-mitigation $domain:"
+options=( $(ls -d *) )
+PS3="$prompt "
+
+select opt in "${options[@]}" "Thoat." ; do
+    if (( REPLY == 1 + ${#options[@]} )) ; then
+        /etc/quicklemp/menu/ddos-mitigation_
+
+    elif (( REPLY > 0 && REPLY <= ${#options[@]} )) ; then
+                echo $opt
+        break
+
+    else
+        echo "Wrong option, please try again: "
+    fi
+done
+
+
+
+mkdir -p /etc/nginx/html
+cd /etc/nginx/html
+
+wget --no-check-certificate --backups=1 https://scripts.tino.org/tino-nginx/TEM/aes.min.js  &> /dev/null
+wget --no-check-certificate  --backups=1 https://scripts.tino.org/tino-nginx/TEM/captcha.html  &> /dev/null
+
+csf -x  &> /dev/null
+yum install git jq whois -y  &> /dev/null
+echo ""  >  /tmp/whitelistip.txt
+whois -h whois.radb.net -- '-i origin AS32934' | grep ^route |awk '{ print $2";" }' >> /tmp/whitelistip.txt
+#whois -h whois.radb.net -- '-i origin AS13335' | grep ^route |awk '{ print $2";" }' >> /tmp/whitelistip.txt
+curl -s https://www.gstatic.com/ipranges/goog.json | grep Prefix |  awk -F \" '{print $4";"}' >> /tmp/whitelistip.txt
+#cat /tmp/whitelistip.txt |sort -u > /etc/nginx/whitelistip.txt
+sort -u /etc/nginx/whitelistip.txt  /tmp/whitelistip.txt | uniq > /tmp/merge
+cat /tmp/merge > /etc/nginx/whitelistip.txt
+rm -rf  /tmp/whitelistip.txt
+
+
+
+echo "yes" > /etc/quicklemp/domains/$opt/ddos-mitigation;
+rm -rf /etc/nginx/conf.d/addon_confs/$opt/checkcookie.conf
+cd /etc/nginx/conf.d/addon_confs/$opt/
+wget https://scripts.tino.org/tino-nginx/SOURCES/checkcookie.conf &> /dev/null
+
+cat > "/etc/nginx/conf.d/addon_confs/$opt/checkcookieload.conf" <<END
+location = /captcha.html {
+testcookie off;
+    root /etc/nginx/html;
+}
+
+location = /aes.min.js {
+testcookie off;
+    gzip on;
+    gzip_min_length 1000;
+    gzip_types text/plain;
+    root /etc/nginx/html;
+}
+
+END
+
+
+nginx -s reload
+echo "Turned on ddos-mitigation for domain $opt success."
+
+/etc/quicklemp/menu/ddos-mitigation_

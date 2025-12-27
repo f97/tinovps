@@ -1,0 +1,64 @@
+# @author: Nguyen Van Phong from TinoHost
+# @website:  https://tinohost.com, https://kienthuclinux.com
+# @since: 2020
+
+system_version=$(rpm -E %{rhel})
+
+echo ""
+echo "====================================================================================="
+echo "Menu Board > Manage Google PageSpeed > Turn On Google PageSpeed"
+echo "/-------------------------/"
+echo "- Turn On Google PageSpeed"
+echo "/-----------------------------------------------------------------------------------/"
+
+cd /etc/quicklemp/domains/
+
+if (( ${system_version} == 9 ));then
+echo "PageSpeed not support for RHEL 9"
+    exit;
+fi
+
+
+
+prompt="Select the domain name you want to enable Google PageSpeed $domain:"
+options=( $(ls -d *) )
+PS3="$prompt "
+
+select opt in "${options[@]}" "Thoat." ; do
+    if (( REPLY == 1 + ${#options[@]} )) ; then
+        /etc/quicklemp/menu/pagespeed_
+
+    elif (( REPLY > 0 && REPLY <= ${#options[@]} )) ; then
+                echo $opt
+        break
+
+    else
+        echo "Wrong option, please try again: "
+    fi
+done
+
+page_speed=$(</etc/quicklemp/domains/$opt/page_speed)
+
+if [ "$page_speed" == "no" ]; then
+
+    echo "yes" > /etc/quicklemp/domains/$opt/page_speed;
+cat > "/etc/nginx/conf.d/addon_confs/$opt/page_speed.conf" <<END
+pagespeed on;
+location /ngx_pagespeed_statistics { include conf.d/custom/admin-ips.conf; deny all; }
+location /ngx_pagespeed_global_statistics { include conf.d/custom/admin-ips.conf; deny all; }
+location /ngx_pagespeed_message { include conf.d/custom/admin-ips.conf; deny all; }
+location /pagespeed_console { include conf.d/custom/admin-ips.conf; deny all; }
+location /pagespeed_admin { include conf.d/custom/admin-ips.conf; deny all; }
+location /pagespeed_global_admin { include conf.d/custom/admin-ips.conf; deny all; }
+location ~ "\.pagespeed\.([a-z]\.)?[a-z]{2}\.[^.]{10}\.[^.]+" { add_header "" ""; }
+location ~ "^/ngx_pagespeed_static/" { }
+location ~ "^/ngx_pagespeed_beacon$" { }
+END
+
+nginx -s reload
+echo "Turned on Google PageSpeed for domain $opt success."
+else
+    echo "Google PageSpeed has been enabled on your domain."
+fi
+
+/etc/quicklemp/menu/pagespeed_

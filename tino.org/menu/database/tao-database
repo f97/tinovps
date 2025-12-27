@@ -1,0 +1,84 @@
+# @author: Lãng Tử Cô Độc
+# @website:  https://tinohost.com, https://kienthuclinux.com
+# @since: 2020
+
+
+gen_pass() {
+    MATRIX='0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz'
+    LENGTH=16
+    while [ ${n:=1} -le $LENGTH ]; do
+        PASS="$PASS${MATRIX:$(($RANDOM%${#MATRIX})):1}"
+        let n+=1
+    done
+    echo "$PASS"
+}
+
+
+
+
+if [ "`systemctl is-active mariadb.service`" == "active" ]; then
+echo ""
+echo "====================================================================================="
+echo "Menu Board > Manage Database > Add New Database"
+echo "/-------------------------/"
+echo "- Add New Database"
+echo "/-----------------------------------------------------------------------------------/"
+echo -n "Input Name of database you need create and press [ENTER]: " 
+read dataname
+if [ "$dataname" = "" ]; then
+echo "You are entering the wrong information, please try again."
+/etc/quicklemp/menu/database_
+fi
+
+if [ -f /var/lib/mysql/$dataname/db.opt ]; then
+echo "Database $dataname already exists on your VPS"
+echo "Good bye....!"
+/etc/quicklemp/menu/database_
+fi
+
+echo -n "Input User Name of database you need create and press [ENTER]: " 
+read username
+if [ "$username" = "" ]; then
+	username="$dataname"
+	echo "The information you entered appears to be blank, the system will automatically retrieve the same information as $dataname"
+fi
+
+#echo -n "Input new password for $username [ENTER]: " 
+#read password
+#if [ "$password" = "" ]; then
+#	password="$dataname"
+#	echo "The information you entered is blank, the system will automatically retrieve the information for $dataname"
+#fi
+
+password=$(gen_pass)
+
+    cat > "/tmp/config.temp" <<END
+CREATE DATABASE $dataname COLLATE utf8_general_ci;
+CREATE USER '$username'@'localhost' IDENTIFIED BY '$password';
+GRANT ALL PRIVILEGES ON $dataname . * TO '$username'@'localhost';
+FLUSH PRIVILEGES;
+END
+
+mysql < /tmp/config.temp
+rm -f /tmp/config.temp
+
+clear
+echo ""
+echo "====================================================================================="
+echo "Menu Board > Manage Database > Add New Database"
+echo "/-------------------------/"
+echo ""
+echo "/-----------------------------------------------------------------------------------/"
+echo "The database $dataname was created successfully !"
+echo "==================="
+echo "Information detail :"
+printf "Database Name : $dataname\nDatabase User: $username\nPassword: $password\n\n"
+
+echo "See you again....!"
+
+else
+echo "MariaDB has not started or is experiencing an error that cannot be started.!!!"
+echo "Pls check again."
+/etc/quicklemp/menu/database_
+fi
+/etc/quicklemp/menu/database_

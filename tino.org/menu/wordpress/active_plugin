@@ -1,0 +1,94 @@
+# @author: Nguyen Van Phong from TinoHost
+# @website:  https://tinohost.com, https://kienthuclinux.com
+# @since: 2020
+echo ""
+echo "====================================================================================="
+echo "Menu Board > TinoVPS Options > Change Password WordPress"
+echo "/-------------------------/"
+echo "- Change Password WordPress"
+echo "/-----------------------------------------------------------------------------------/"
+echo "Obtaining information about available domain names on VPS."
+echo "Here are the domain names that have been added on your VPS."
+sleep 2
+echo ""
+gen_pass() {
+    MATRIX='0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz'
+    LENGTH=16
+    while [ ${n:=1} -le $LENGTH ]; do
+        PASS="$PASS${MATRIX:$(($RANDOM%${#MATRIX})):1}"
+        let n+=1
+    done
+    echo "$PASS"
+}
+
+cd /etc/quicklemp/domains/
+# check xem da co domain nao tren vps chua
+if [ -z "$(ls -A /etc/quicklemp/domains/)" ]; then
+   echo "you dont have any domain, pls add 1 domain first!!!"
+ /etc/quicklemp/menu/app_
+fi
+## end check
+prompt="Choies domain you want Active plugin:"
+options=( $(ls -d *) )
+PS3="$prompt "
+
+select opt in "${options[@]}" "Exit." ; do
+    if (( REPLY == 1 + ${#options[@]} )) ; then
+        /etc/quicklemp/menu/app_
+
+    elif (( REPLY > 0 && REPLY <= ${#options[@]} )) ; then
+                echo $opt
+        break
+
+    else
+        echo "Wrong option, please try again: "
+    fi
+done
+
+domain=$opt
+user=$(</etc/quicklemp/domains/$domain/user)
+php_version=$(</etc/quicklemp/domains/$domain/php_version)
+cd /home/$domain/public_html/
+
+if ! [ -f /home/$domain/public_html/wp-config.php ]; then
+echo "domain khong phai la wordpress .. thoat.!"
+/etc/quicklemp/menu/wordpress_
+fi
+
+wp plugin list --status=inactive --skip-plugins --field=name ${WPFLAGS} --allow-root > /tmp/plugin-list.txt
+
+
+echo "Please select the Plugin you want Active:"
+
+files=$(cat /tmp/plugin-list.txt)
+if [ -z "$files" ]
+then
+echo "$domain, toan bo plugin da duoc bat .. thoat.!"
+/etc/quicklemp/menu/wordpress_
+fi
+
+i=1
+
+for j in $files
+do
+echo "$i) $j"
+file[i]=$j
+i=$(( i + 1 ))
+done
+
+echo -n "Enter number plugin you want Deactive:"
+read input
+if [ -z "${file[$input]}" ]
+then
+echo "Tuy chon khong dung... thoat.!"
+sleep 2
+/etc/quicklemp/menu/wordpress_
+fi
+
+echo "You select Deactive plugin: ${file[$input]}"
+
+#wp option get siteurl --skip-plugins="${file[$input]}" --allow-root
+wp plugin activate "${file[$input]}" --skip-plugins --allow-root
+
+echo "Return main menu !!!"
+/etc/quicklemp/menu/wordpress_

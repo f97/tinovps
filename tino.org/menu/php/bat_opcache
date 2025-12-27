@@ -1,0 +1,47 @@
+#!/bin/bash 
+##TinoVPS Script##
+
+
+echo ""
+echo "====================================================================================="
+echo "Menu Board > PHP  > Turn on opcache"
+echo "/-------------------------/"
+echo "- Turn on Opcache php"
+echo "/-----------------------------------------------------------------------------------/"
+echo ""
+
+
+cd /opt/php/
+
+
+prompt="Please select the version of PHP you want turn on opcache php:"
+options=( $(ls -d *) )
+PS3="$prompt "
+
+select opt in "${options[@]}" "Thoát." ; do
+    if (( REPLY == 1 + ${#options[@]} )) ; then
+        /etc/quicklemp/menu/php_
+
+    elif (( REPLY > 0 && REPLY <= ${#options[@]} )) ; then
+		echo ""
+        break
+
+    else
+        echo "Wrong option, please try again: "
+    fi
+done
+
+php_dir=$opt
+php_ver=${opt:3}
+
+echo ""
+
+sed -i 's/opcache.enable=0/opcache.enable=1/g' /opt/php/$php_dir/lib/php.ini &>/dev/null
+
+service php-fpm-$php_ver restart &>/dev/null
+
+echo ""
+echo "Congratulations,  Your has been successfully turn on opcache  on $php_ver  the system.!"
+echo ""
+/etc/quicklemp/menu/php_
+

@@ -1,0 +1,97 @@
+cd /opt/php/
+echo ""
+echo "====================================================================================="
+echo "Menu Board > Manage Setting PHP > Update PHP Installed"
+echo "/-------------------------/"
+echo "- Update PHP Installed"
+echo "/-----------------------------------------------------------------------------------/"
+prompt="Select the  PHP version you want install memcached ? :"
+
+options=( $(ls -d *) )
+PS3="$prompt "
+select opt in "${options[@]}" "Quit" ; do
+    if (( REPLY == 1 + ${#options[@]} )) ; then
+        exit
+
+    elif (( REPLY > 0 && REPLY <= ${#options[@]} )) ; then
+                echo $opt
+        break
+
+    else
+        echo "Wrong option, please try again: "
+    fi
+done
+
+mem_ver="3.1.5"
+php_dir=$opt
+php_ver1=${opt:3:1}
+php_ver=${opt:4}
+php_service=${opt:3}
+
+phptien="_"
+php_pick=($php_ver1.$php_ver)
+php_com=($php_ver1$phptien$php_ver)
+echo "You choose version $php_pick"
+
+phpinfo=${php_pick:0:1}
+
+if [ "$phpinfo" = "5" ] ; then
+mem_ver="2.2.0"
+fi
+
+
+memcached=$(/opt/php/$php_dir/bin/php -m | grep memcached)
+
+if ! [ "$memcached" = "" ]; then
+echo "memcached da duoc cai dat tren $php_dir"
+# check memcached service 
+if systemctl is-active --quiet memcached; then
+	echo -e "\nmemcached process detected, memcached service no need install exit...\n"
+else
+yum install memcached -y
+service memcached start
+echo 'OPTIONS="-l 127.0.0.1 -U 0"' >> /etc/sysconfig/memcached
+systemctl enable memcached
+service memcached restart
+fi
+
+exit
+fi
+
+yum --enablerepo=powertools install libmemcached-devel -y
+
+
+cd /opt/php/$php_dir
+wget https://launchpad.net/libmemcached/1.0/1.0.18/+download/libmemcached-1.0.18.tar.gz
+tar -vxzf libmemcached-1.0.18.tar.gz
+cd libmemcached-1.0.18
+./configure --prefix=/opt/php/$php_dir/libmemcached --with-memcached --enable-sasl
+make && make install
+
+cd ..
+wget https://pecl.php.net/get/memcached-$mem_ver.tgz
+tar -vxzf memcached-$mem_ver.tgz
+cd memcached-$mem_ver
+../bin/phpize
+./configure --with-php-config=/opt/php/$php_dir/bin/php-config --with-libmemcached-dir=/opt/php/$php_dir/libmemcached --disable-memcached-sasl
+make
+make install
+echo extension=memcached.so >> /opt/php/$php_dir/lib/php.ini
+
+
+##ca
+if systemctl is-active --quiet memcached; then
+	echo -e "\nmemcached process detected, memcached service no need install ...\n"
+else
+yum install memcached -y
+service memcached start
+echo 'OPTIONS="-l 127.0.0.1 -U 0"' >> /etc/sysconfig/memcached
+systemctl enable memcached
+service memcached restart
+fi
+
+service php-fpm-$php_service restart
+echo "Install memcached to $php_dir done !!"
+exit
+
+

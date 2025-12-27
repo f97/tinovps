@@ -1,0 +1,15 @@
+#!/bin/bash 
+
+server_ip=$(ip route get 8.8.8.8 | awk -F"src " 'NR==1{split($2,a," ");print a[1]}')
+
+echo ""
+echo "====================================================================================="
+echo "Menu Board > Manage SSL Certificate > Install Paid SSL For Domain"
+echo "/-------------------------/"
+echo "- Install Paid SSL For Domain"
+echo "/-----------------------------------------------------------------------------------/"
+echo 
+echo "This great feature will be updated by TinoHost soon, will be very soon .... ^.^ ...."
+exit
+
+

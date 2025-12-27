@@ -1,0 +1,116 @@
+# @author: Nguyen Van Phong from TinoHost
+# @website:  https://tinohost.com, https://kienthuclinux.com
+# @since: 2020
+echo ""
+echo "====================================================================================="
+echo "Menu Board > TinoVPS Options > Change Password WordPress"
+echo "/-------------------------/"
+echo "- Change Password WordPress"
+echo "/-----------------------------------------------------------------------------------/"
+echo "Obtaining information about available domain names on VPS."
+echo "Here are the domain names that have been added on your VPS."
+sleep 2
+echo ""
+gen_pass() {
+    MATRIX='0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz'
+    LENGTH=16
+    while [ ${n:=1} -le $LENGTH ]; do
+        PASS="$PASS${MATRIX:$(($RANDOM%${#MATRIX})):1}"
+        let n+=1
+    done
+    echo "$PASS"
+}
+
+cd /etc/quicklemp/domains/
+# check xem da co domain nao tren vps chua
+if [ -z "$(ls -A /etc/quicklemp/domains/)" ]; then
+   echo "you dont have any domain, pls add 1 domain first!!!"
+ /etc/quicklemp/menu/app_
+fi
+## end check
+prompt="Choies domain you want Active plugin:"
+options=( $(ls -d *) )
+PS3="$prompt "
+
+select opt in "${options[@]}" "Exit." ; do
+    if (( REPLY == 1 + ${#options[@]} )) ; then
+        /etc/quicklemp/menu/app_
+
+    elif (( REPLY > 0 && REPLY <= ${#options[@]} )) ; then
+                echo "you pick domain: $opt";
+				sleep 2
+        break
+
+    else
+        echo "Wrong option, please try again: "
+    fi
+done
+
+domain=$opt
+user=$(</etc/quicklemp/domains/$domain/user)
+php_version=$(</etc/quicklemp/domains/$domain/php_version)
+
+cd /root/
+rm -rf /tmp/theme-list
+wget https://scripts.tino.org/theme-list.txt -P /tmp  > /dev/null 2>&1
+cd /home/$domain/public_html/
+
+if ! [ -f /home/$domain/public_html/wp-config.php ]; then
+echo "domain khong phai la wordpress .. thoat.!"
+/etc/quicklemp/menu/wordpress_
+fi
+
+
+echo "Please select the Theme you want Active:"
+
+files=$(cat /tmp/theme-list.txt)
+if [ -z "$files" ]
+then
+echo "Khong lay duoc list theme tu server .. thoat.!"
+/etc/quicklemp/menu/wordpress_
+fi
+
+i=1
+
+for j in $files
+do
+echo "$i.) $j"
+file[i]=$j
+i=$(( i + 1 ))
+done
+
+echo -n "Enter number Theme you want Install:"
+read input
+if [ -z "${file[$input]}" ]
+then
+echo "Tuy chon khong dung... thoat.!"
+sleep 2
+/etc/quicklemp/menu/wordpress_
+fi
+
+echo "You select Theme: ${file[$input]} to install"
+plugin_install=${file[$input]}
+plugin_zip=`echo $plugin_install | sed 's/\\r//g'`
+
+check_install=$(wp theme list --field=name ${WPFLAGS} --allow-root  | grep $plugin_zip)
+
+if ! [ -z "${check_install}" ]
+then
+echo "Theme da duoc cai dat... thoat.!"
+sleep 2
+/etc/quicklemp/menu/wordpress_
+fi
+
+wget https://scripts.tino.org/themeandplugin/themes/${plugin_zip}.zip 
+
+
+#wp option get siteurl --skip-plugins="${file[$input]}" --allow-root
+#wp plugin activate "${file[$input]}" --skip-plugins --allow-root
+wp theme install ./${plugin_zip}.zip --allow-root
+chown -R $user:$user /home/$domain/public_html/
+rm -rf ./${plugin_zip}.zip
+rm -rf /tmp/theme-list.txt
+
+
+echo "Return main menu,  !!!"
+/etc/quicklemp/menu/wordpress_

@@ -1,0 +1,61 @@
+#!/bin/bash 
+##TinoVPS Script##
+
+
+echo ""
+echo "====================================================================================="
+echo "Menu Board > PHP  > Install imagick extension"
+echo "/-------------------------/"
+echo "- INstall imagick extension to php"
+echo "/-----------------------------------------------------------------------------------/"
+echo ""
+
+
+cd /opt/php/
+
+
+prompt="Please select the version of PHP you want add extension imagick:"
+options=( $(ls -d *) )
+PS3="$prompt "
+
+select opt in "${options[@]}" "Thoát." ; do
+    if (( REPLY == 1 + ${#options[@]} )) ; then
+        /etc/quicklemp/menu/php_
+
+    elif (( REPLY > 0 && REPLY <= ${#options[@]} )) ; then
+		echo ""
+        break
+
+    else
+        echo "Wrong option, please try again: "
+    fi
+done
+
+php_dir=$opt
+php_ver=${opt:3}
+
+echo ""
+echo "$php_dir"
+echo "$php_ver"
+
+
+cd /opt/php/$php_dir/bin/
+imagick=$(/opt/php/$php_dir/bin/php -m | grep imagick)
+
+if [ "$imagick" = "" ]; then
+echo "tien hanh cai dat imagick"
+yes | ./pecl install imagick
+echo  "extension=imagick.so" >> /opt/php/$php_dir/lib/php.ini
+
+service php-fpm-$php_ver restart &>/dev/null
+
+
+echo ""
+echo "Congratulations,  Your has been successfully added imagick  on $php_ver  the system.!"
+echo ""
+/etc/quicklemp/menu/php_
+
+else
+echo "Imagick da duoc cai dat tren phien ban php $php_dir"
+fi
+/etc/quicklemp/menu/php_

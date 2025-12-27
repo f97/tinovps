@@ -1,0 +1,106 @@
+#!/bin/sh
+server_ip=$(dig -4 TXT +short o-o.myaddr.l.google.com @ns1.google.com | sed -e 's/\"//g')
+#/root/.acme.sh/acme.sh --upgrade --auto-upgrade  > /dev/null 2>&1
+rm -rf /tmp/version_tino
+#wget https://scripts.tino.org/version_tino -P /tmp  > /dev/null 2>&1
+
+version_tino=$(curl -ss --location --connect-timeout 1 -m 1 --speed-limit 1 --speed-time 1 "https://scripts.tino.org/version_tino")
+version_vps=$(</etc/quicklemp/tino_version)
+
+
+checkcron=$(crontab -l | grep "/usr/sbin/service nginx")
+
+if [[ $checkcron == "" ]]; then
+echo '14 0 * * * /usr/sbin/service nginx reload ' >> /var/spool/cron/root
+fi
+
+
+#if systemctl is-active --quiet goaccess; then
+#yum -y remove goaccess  > /dev/null 2>&1
+#service goaccess stop > /dev/null 2>&1
+#fi
+
+
+
+if ! [ -z "${version_tino}" ]
+then
+echo ""
+if [[ $version_tino = $version_vps ]] ; then
+echo ""
+else
+echo "Checking Update Tinoscript ..."
+/etc/quicklemp/menu/update_
+cat > "/etc/quicklemp/tino_version" <<END
+$version_tino
+END
+tino
+fi
+fi
+clear
+
+prompt="~ Input number with your choose, press 0 to open Menu Board : "
+options=("Manage Domains"
+ "Manage Databases"
+ "Manage SSL Certificate"
+ "Manage Setting PHP"
+ "Manage Setting Nginx"
+ "Manage Google PageSpeed"
+ "Quick Install Code for Website"
+ "Install Memcached for PHP"
+ "Install Redis Cache for PHP"
+ "Backup/Restore On Localhost"
+ "Backup/Restore From Google Drive"
+ "Change Permission Website"
+ "Move All Website From Other VPS"
+ "Manage Firewall On VPS"
+ "Manage SSH And Password"
+ "Wordpress Tools"
+ "Modsecurity Protection"
+ "Ddos Mitigation-Block DDOS Layer7"
+ "Restart Webserver service"
+ "Upgrade TinoVPS Script")
+
+ # End Options
+printf "=====================================================================================\n"
+printf "                   TinoVPS Script by TinoHost (tinohost.com)                         \n"
+printf "/---           Please regularly update the Script   by  menu 18                  ---/\n"
+printf "                   MENU BOARD - TinoVPS Script $version_vps  (Mainline)                   \n"
+printf "                                                                                     \n"
+printf "      Cap Nhat Moi nhat: Rule firewall, nginx, vhost, login panel, fix cron local      \n"                    
+printf "    Them Tinh Nang WP: Toi Uu Anh, Tat/Bat plugin, Cai premium plugin/theme          \n"
+printf "    TOOL Bybass DDOS LAYER 7, Modsecurity HELP protect hacker attack website          \n"
+printf "                                                                                     \n"
+printf "Use command to view account info :# cat /opt/server_install_account                  \n"
+printf "Read our documentions : https://help.tino.org/danh-muc/huong-dan-ve-tinovps-script/  \n"
+printf "/-----------------------------------------------------------------------------------/\n"
+PS3="
+$prompt"
+select opt in "${options[@]}" "Exit Menu Board [Ctrl + C]"; do
+
+    case "$REPLY" in
+            0 ) /usr/bin/tino;;
+            1 ) /etc/quicklemp/menu/domain_;;
+            2 ) /etc/quicklemp/menu/database_;;
+            3 ) /etc/quicklemp/menu/ssl_;;
+            4 ) /etc/quicklemp/menu/php_;;
+            5 ) /etc/quicklemp/menu/nginx_;;
+            6 ) /etc/quicklemp/menu/pagespeed_;;
+            7 ) /etc/quicklemp/menu/app_;;
+            8 ) /etc/quicklemp/menu/memcached_;;
+            9 ) /etc/quicklemp/menu/redis_;;
+            10 ) /etc/quicklemp/menu/backuplocal_;;
+            11 ) /etc/quicklemp/menu/drive_;;
+            12 ) /etc/quicklemp/menu/phan_quyen_;;
+            13 ) /etc/quicklemp/menu/move_vps_;;
+            14 ) /etc/quicklemp/menu/csf_;;
+            15 ) /etc/quicklemp/menu/ssh_;;
+            16 ) /etc/quicklemp/menu/wordpress_;;
+			17 ) /etc/quicklemp/menu/modsecurity_;;
+			18 ) /etc/quicklemp/menu/ddos-mitigation_;;
+            19 ) /etc/quicklemp/menu/restart_;;
+            20 ) /etc/quicklemp/menu/update_;;
+            # End Menu
+            *) echo "You are entering information that does not exist on the Menu Board, please try again with a valid number on the corresponding Menu Board.!";exit;;
+
+    esac
+done

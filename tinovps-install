@@ -5,6 +5,7 @@
 
 # GitHub repo base URL for downloading assets
 GITHUB_RAW_URL="https://raw.githubusercontent.com/f97/tinovps/master"
+GITHUB_RELEASE_URL="https://raw.githubusercontent.com/f97/tinovps/master/release"
 
 
 gen_pass() {
@@ -714,7 +715,7 @@ nginx_version="1.28.1"
 release_nginx="1"
 cd /root/
 
-wget --no-check-certificate $GITHUB_RAW_URL/repo_nginx/$system_version/nginx-$nginx_version-$release_nginx.el$system_version.ngx.x86_64.rpm
+wget --no-check-certificate $GITHUB_RELEASE_URL/nginx-$nginx_version-$release_nginx.el$system_version.ngx.x86_64.rpm
 
 yum install libmaxminddb -y
 yum localinstall /root/nginx-$nginx_version-$release_nginx.el$system_version.ngx.x86_64.rpm -y
@@ -740,7 +741,7 @@ mkdir -p /etc/nginx/conf.d/
 
 cd /etc/nginx/conf.d/
 
-wget --no-check-certificate $GITHUB_RAW_URL/tino.org/tino-master.zip
+wget --no-check-certificate $GITHUB_RELEASE_URL/tino-master.zip
 echo "A" | unzip tino-master*
 rm -rf tino-master.zip
 
@@ -910,7 +911,7 @@ mysqladmin drop test -f
 ##
 mkdir -p /etc/quicklemp/menu
 cd /etc/quicklemp/menu
-wget --no-check-certificate $GITHUB_RAW_URL/tino.org/menu/menu.zip
+wget --no-check-certificate $GITHUB_RELEASE_URL/menu.zip
 unzip menu.zip
 rm -rf menu.zip
 chmod +x /etc/quicklemp/menu/*
@@ -927,7 +928,7 @@ systemctl stop firewalld
 
 yum install perl-libwww-perl -y
 cd /tmp
-wget --no-check-certificate $GITHUB_RAW_URL/csf/csf.tgz
+wget --no-check-certificate $GITHUB_RELEASE_URL/csf.tgz
 tar -xzf csf.tgz
 cd csf
 sh install.sh
@@ -1149,7 +1150,7 @@ chmod +x wp-cli.phar ## phân quyền cho wp-cli
 mv wp-cli.phar /usr/local/bin/wp    ## di chuyển wp-cli thành thư viện.
 
 cd /opt/tinopanel/private_html/
-wget --no-check-certificate -q $GITHUB_RAW_URL/tino.org/guimenu/guimenu.zip
+wget --no-check-certificate -q $GITHUB_RELEASE_URL/guimenu.zip
 echo "A" | unzip guimenu.zip
 rm -rf /opt/tinopanel/private_html/guimenu.zip
 chown -R tinopanel:tinopanel /opt/tinopanel/private_html/
@@ -1410,7 +1411,7 @@ sleep 20
 
 cd /root/
 
-wget --no-check-certificate $GITHUB_RAW_URL/rclone/rclone-v1.72.1-linux-amd64.zip
+wget --no-check-certificate $GITHUB_RELEASE_URL/rclone-v1.72.1-linux-amd64.zip
 unzip rclone-*
 \cp rclone-*-linux-amd64/rclone /usr/bin/
 rm -rf rclone-*

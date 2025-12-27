@@ -1,0 +1,194 @@
+server_ip=$(dig -4 TXT +short o-o.myaddr.l.google.com @ns1.google.com | sed -e 's/\"//g')
+port=$(</etc/quicklemp/port.txt)
+# @author: Lãng Tử Cô Độc
+# @website:  https://tinohost.com, https://kienthuclinux.com
+# @since: 2020clear
+echo ""
+echo "====================================================================================="
+echo "Menu Board > Manage Domains > Change PHP Version for Domain"
+echo "/-------------------------/"
+echo "- Change PHP Version for Domain"
+echo "/-----------------------------------------------------------------------------------/"
+
+cd /etc/quicklemp/domains/
+prompt="Please select the corresponding domain name above that you want to change the PHP version :"
+
+options=( $(ls -d *) )
+PS3="$prompt "
+
+select opt in "${options[@]}" "Quit" ; do
+    if (( REPLY == 1 + ${#options[@]} )) ; then
+        /etc/quicklemp/menu/domain_
+
+    elif (( REPLY > 0 && REPLY <= ${#options[@]} )) ; then
+                echo "You are choosing a domain name : $opt"
+                                domain=$opt
+        break
+    else
+        echo "Wrong option, please try again with the option available above: "
+    fi
+done
+
+
+cd /opt/php/
+prompt="Please select the corresponding domain name above that you want to change the PHP version $domain:"
+options=( $(ls -d *) )
+PS3="$prompt "
+
+select opt in "${options[@]}" "Quit" ; do
+    if (( REPLY == 1 + ${#options[@]} )) ; then
+        /etc/quicklemp/menu/domain_
+
+    elif (( REPLY > 0 && REPLY <= ${#options[@]} )) ; then
+                echo $opt
+        break
+
+    else
+        echo "Wrong option, please try again with the option available above: "
+    fi
+done
+php_dir=$opt
+php_ver=${opt:3}
+echo "$php_dir"
+echo "$php_ver"
+old_dir=$(</etc/quicklemp/domains/$domain/php_dir)
+user=$(</etc/quicklemp/domains/$domain/user)
+rm -f /opt/php/$old_dir/etc/php-fpm.d/$domain.conf
+echo ""
+echo ""
+
+total_ram=$(free -m | awk 'NR==2{print $2}')
+php_ram=40
+pmmax_children=$((total_ram / php_ram))
+pmstart_servers=$((pmmax_children * 10 / 100 + 1))
+pmmin_spare_servers=$((pmmax_children * 5 / 100 + 1))
+pmmax_spare_servers=$((pmmax_children * 20 / 100 + 1))
+pmmax_requests=1500
+
+cat > "$php_dir/etc/php-fpm.d/$domain.conf" <<END
+[$domain]
+listen = /dev/shm/$domain.$php_dir.sock;
+user = $user
+group = $user
+listen.owner = nginx
+listen.group = nginx
+listen.mode = 0644
+pm = ondemand
+pm.max_children = $pmmax_children
+pm.start_servers = $pmstart_servers
+pm.min_spare_servers = $pmmin_spare_servers
+pm.max_spare_servers = $pmmax_spare_servers
+pm.max_requests = $pmmax_requests
+END
+
+cat > "/etc/quicklemp/domains/$domain/php_dir" <<END
+$php_dir
+END
+
+   cat > "/etc/nginx/conf.d/vhosts/$domain.conf" <<END
+server {
+        listen 80;
+        server_name $domain $domain_alias;
+        root /home/$domain/public_html;
+
+	    access_log /home/$domain/logs/access_log main;
+	    error_log /home/$domain/logs/error_log warn;
+
+        if (\$bad_bot) { return 444; }
+        set \$fpmuser $domain.$php_dir;
+    include conf.d/addon_confs/$domain/*.conf;
+include conf.d/custom/wp-rocket.conf;	
+}
+
+END
+
+ cat > "/etc/nginx/conf.d/vhosts/$domain.ssl.conf" <<END
+server {
+        listen 443 ssl http2;
+        server_name $domain $domain_alias;
+        root /home/$domain/public_html;
+		
+	    access_log /home/$domain/logs/access_ssl_log main;
+	    error_log /home/$domain/logs/error_ssl_log warn;
+
+        if (\$bad_bot) { return 444; }
+        set \$fpmuser $domain.$php_dir;
+
+        include conf.d/ssl/$domain/ssl.conf;
+        include conf.d/addon_confs/$domain/*.conf;
+		include conf.d/custom/wp-rocket.conf;
+}
+END
+if [ "$php_version" = "fpm-laravel-users" ]; then
+sed -i "s/$domain\/public_html;/$domain\/public_html\/public;/g" /etc/nginx/conf.d/vhosts/$domain.ssl.conf
+sed -i "s/$domain\/public_html;/$domain\/public_html\/public;/g" /etc/nginx/conf.d/vhosts/$domain.conf
+fi
+
+echo "$domain has been successfully changed to php$php_ver !!!**!!!"
+
+
+##################################################
+aliase_file="/etc/quicklemp/domains/$domain/aliase"
+if [ -f "$aliase_file" ]; then
+    aliase_domain=$(<"$aliase_file")
+else
+    aliase_domain=""
+fi
+
+if [[ -n $aliase_domain && -f "/etc/nginx/conf.d/vhosts/${aliase_domain}.conf" ]]; then
+    sed -i "s/$domain\/public_html;/$aliase_domain\/public_html;/g" /etc/nginx/conf.d/vhosts/$domain.ssl.conf
+    sed -i "s/$domain\/public_html;/$aliase_domain\/public_html;/g" /etc/nginx/conf.d/vhosts/$domain.conf
+	
+fi
+
+if ! systemctl is-active --quiet monit; then
+yum install monit -y  &>/dev/null
+
+rm -rf /etc/monit.d/*
+cat > "/etc/monit.d/logging" <<END
+# log to monit.log
+set logfile /var/log/monit.log
+END
+fi
+
+cat > "/etc/monit.d/disk" <<END
+check device rootfs with path /
+  if space usage > 98% then exec "/bin/bash -c '/usr/bin/find /var/log/messages-* /home/*/logs/access_*.gz /home/*/logs/error_*.gz -delete'"
+END
+cat > "/etc/monit.d/mysql" <<END
+check process mysql with pidfile /var/lib/mysql/sv.pid
+  start program = "/usr/bin/systemctl start mysql"
+  stop program  = "/usr/bin/systemctl stop mysql"
+  if 5 restarts within 5 cycles then timeout
+END
+cat > "/etc/monit.d/nginx" <<END
+check process nginx with pidfile /var/run/nginx.pid
+  start program = "/usr/bin/systemctl start nginx"
+  stop program  = "/usr/bin/systemctl stop nginx"
+END
+
+
+for dir in /opt/php/php*; do
+  if [ -d "$dir" ]; then
+    php="${dir##*/}"
+    php_ver="${php:3}"
+    php_full="php-fpm-${php_ver}"
+
+    cat > "/etc/monit.d/php$php_ver" <<END
+check process php$php_ver with pidfile /opt/php/php$php_ver/var/run/php-fpm.pid
+  start program = "/usr/bin/systemctl start $php_full"
+  stop program = "/usr/bin/systemctl stop $php_full"
+END
+  fi
+done
+systemctl restart monit
+systemctl enable monit
+
+nginx -s reload  &>/dev/null
+
+##################################################
+
+    service php-fpm-$php_ver restart  &>/dev/null
+echo ""
+echo ""
+/etc/quicklemp/menu/domain_

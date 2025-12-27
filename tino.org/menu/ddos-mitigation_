@@ -1,0 +1,30 @@
+#!/bin/bash
+
+echo ""
+echo "====================================================================================="
+echo "Menu Board > Manage ddos-mitigation"
+echo "/-------------------------/"
+echo "- Manage ddos-mitigation"
+echo "/-----------------------------------------------------------------------------------/"
+echo 
+PS3='Input number you choose (1-2) [0=Exit]: '
+options=("Turn On ddos-mitigation" "Turn Off ddos-mitigation" "TURN ON AUTO ANTI DDOS LAYER 7 ALL DOMAIN" "TURN OFF AUTO ANTI DDOS LAYER 7 ALL DOMAIN")
+select opt in "${options[@]}"
+do
+    case $opt in
+        "Turn On ddos-mitigation")
+            '/etc/quicklemp/menu/ddos-mitigation/ddos-mitigation_on'
+            ;;
+        "Turn Off ddos-mitigation")
+            '/etc/quicklemp/menu/ddos-mitigation/ddos-mitigation_off'
+            ;;
+        "TURN ON AUTO ANTI DDOS LAYER 7 ALL DOMAIN")
+            '/etc/quicklemp/menu/ddos-mitigation/on_antiddostino'
+            ;;
+        "TURN OFF AUTO ANTI DDOS LAYER 7 ALL DOMAIN")
+            '/etc/quicklemp/menu/ddos-mitigation/off_antiddostino'
+            ;;
+        *) tino;;
+    esac
+done
+

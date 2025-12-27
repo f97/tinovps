@@ -1,0 +1,127 @@
+server_ip=$(dig -4 TXT +short o-o.myaddr.l.google.com @ns1.google.com | sed -e 's/\"//g')
+port=$(</etc/quicklemp/port.txt)
+# @author: Lãng Tử Cô Độc
+# @website:  https://tinohost.com, https://kienthuclinux.com
+# @since: 2020clear
+echo ""
+echo "====================================================================================="
+echo "Menu Board > Manage Domains > Redirect http to https for Domain"
+echo "/-------------------------/"
+echo "- Redirect http to https for Domain"
+echo "/-----------------------------------------------------------------------------------/"
+
+cd /etc/quicklemp/domains/
+prompt="Please select the corresponding domain name above that you want to redirect http to https:"
+
+options=( $(ls -d *) )
+PS3="$prompt "
+
+select opt in "${options[@]}" "Quit" ; do
+    if (( REPLY == 1 + ${#options[@]} )) ; then
+        /etc/quicklemp/menu/domain_
+
+    elif (( REPLY > 0 && REPLY <= ${#options[@]} )) ; then
+                echo "You are choosing a domain name : $opt"
+                                domain=$opt
+        break
+    else
+        echo "Wrong option, please try again with the option available above: "
+    fi
+done
+
+
+php_dir=$(</etc/quicklemp/domains/$domain/php_dir)
+php_ver=${php_dir:3}
+domain_alias="www.$domain"
+    if [[ $domain == *www* ]]; then
+	    domain_alias=${domain/www./''}
+    fi
+	
+echo "config redirect http to https $domain"          			
+
+
+ cat > "/etc/nginx/conf.d/vhosts/$domain.conf" <<END
+server {
+        listen 80;
+        server_name $domain $domain_alias;
+        root /home/$domain/public_html;
+		
+	    access_log /home/$domain/logs/access_ssl_log main;
+	    error_log /home/$domain/logs/error_ssl_log warn;
+		return 301 https://\$host\$request_uri;
+
+}
+END
+
+
+
+##################################################
+aliase_file="/etc/quicklemp/domains/$domain/aliase"
+if [ -f "$aliase_file" ]; then
+    aliase_domain=$(<"$aliase_file")
+else
+    aliase_domain=""
+fi
+
+if [[ -n $aliase_domain && -f "/etc/nginx/conf.d/vhosts/${aliase_domain}.conf" ]]; then
+    sed -i "s/$domain\/public_html;/$aliase_domain\/public_html;/g" /etc/nginx/conf.d/vhosts/$domain.ssl.conf
+    sed -i "s/$domain\/public_html;/$aliase_domain\/public_html;/g" /etc/nginx/conf.d/vhosts/$domain.conf
+	
+fi
+
+if ! systemctl is-active --quiet monit; then
+yum install monit -y  &>/dev/null
+
+rm -rf /etc/monit.d/*
+cat > "/etc/monit.d/logging" <<END
+# log to monit.log
+set logfile /var/log/monit.log
+END
+fi
+
+cat > "/etc/monit.d/disk" <<END
+check device rootfs with path /
+  if space usage > 98% then exec "/bin/bash -c '/usr/bin/find /var/log/messages-* /home/*/logs/access_*.gz /home/*/logs/error_*.gz -delete'"
+END
+cat > "/etc/monit.d/mysql" <<END
+check process mysql with pidfile /var/lib/mysql/sv.pid
+  start program = "/usr/bin/systemctl start mysql"
+  stop program  = "/usr/bin/systemctl stop mysql"
+  if 5 restarts within 5 cycles then timeout
+END
+cat > "/etc/monit.d/nginx" <<END
+check process nginx with pidfile /var/run/nginx.pid
+  start program = "/usr/bin/systemctl start nginx"
+  stop program  = "/usr/bin/systemctl stop nginx"
+END
+
+
+for dir in /opt/php/php*; do
+  if [ -d "$dir" ]; then
+    php="${dir##*/}"
+    php_ver="${php:3}"
+    php_full="php-fpm-${php_ver}"
+
+    cat > "/etc/monit.d/php$php_ver" <<END
+check process php$php_ver with pidfile /opt/php/php$php_ver/var/run/php-fpm.pid
+  start program = "/usr/bin/systemctl start $php_full"
+  stop program = "/usr/bin/systemctl stop $php_full"
+END
+  fi
+done
+systemctl restart monit
+systemctl enable monit
+
+nginx -s reload  &>/dev/null
+
+##################################################
+
+
+service php-fpm-$php_ver restart 
+echo ""
+rm -rf /var/lib/nginx/cache/fastcgi/*
+
+
+echo "$domain has been successfully redirect http to https"
+
+/etc/quicklemp/menu/domain_

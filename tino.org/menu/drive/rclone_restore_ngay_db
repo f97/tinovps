@@ -1,0 +1,145 @@
+server_ip=$(dig -4 TXT +short o-o.myaddr.l.google.com @ns1.google.com | sed -e 's/\"//g')
+SERVER_NAME=BACKUP_$server_ip
+port=$(</etc/quicklemp/port.txt)
+# @author: Lãng Tử Cô Độc
+# @website:  https://tinohost.com, https://kienthuclinux.com
+# @since: 2020clear
+
+
+echo -n "Enter the database you want to restore and press [ENTER]: "
+read dataname
+
+if [ "$dataname" = "mysql" ] || [ "$dataname" = "infomation_schema" ] || [ "$dataname" = "performance_schema" ]; then
+echo "something is not right"
+echo "You cannot perform a system database backup"
+echo "See you again...!"
+/etc/quicklemp/menu/drive_
+fi
+
+
+counter=1
+while [ $counter == 1 ]
+do
+echo ""
+echo "Please select a recovery date by format Day/Month/Year Ex: 23062020 (Day 23,Month 06,Year 2020)"
+echo "------------------------------------"
+echo -n "Please select the time you want to recover DD/MM/YYYY >"
+read date
+if [ ${#date} -eq 8 ]; then
+    year=${date:4:8}
+    month=${date:2:2}
+    day=${date:0:2}
+    month30="04 06 09 11"
+    leapyear=$((year%4)) # if leapyear this is 0
+    if [ "$year" -ge 1901 -a "$month" -le 12 -a "$day" -le 31 ]; then
+            if [ "$month" -eq 02 -a "$day" -gt 29 ] || [ "$leapyear" -ne 0 -a "$month" -eq 02 -a "$day" -gt 28 ]; then
+                    echo "Too many days for February... try again"; /etc/quicklemp/menu/drive_
+            fi
+            if [[ "$month30" =~ "$month" ]] && [ "$day" -eq 31 ]; then
+                    echo "Month $month cannot have 31 days... try again"; /etc/quicklemp/menu/drive_
+            fi
+    else echo "Sorry, the date you entered is not in the correct format!"; continue;
+	fi
+else echo "Date entered is not in the correct format!"; continue;
+fi
+echo "You are selecting the restore date is : Day: $day Month: $month Year: $year "
+break;
+done
+
+year+="-"
+month+="-"
+date_backup=$(echo "$year$month$day")
+
+rclone ls remote:/$SERVER_NAME/$date_backup/mysql/ | grep $dataname > /tmp/test
+
+if [ -s /tmp/test ]; then
+
+# tao folder tai backup mysql hien tai
+
+
+mkdir -p /opt/tinopanel/private_html/restore/
+
+if [ -f /var/lib/mysql/$dataname/db.opt ]; then
+mkdir -p /opt/tinopanel/private_html/backup/
+cd /opt/tinopanel/private_html/backup/
+echo "Backup the current database... !"
+
+mysqldump $dataname > dataname.sql &> /dev/null
+echo ""
+echo "has backed up $dataname success ... "
+
+echo "******************************************************************************************"
+echo ""
+echo "Link download Database now:"
+echo "Link file backup : /opt/tinopanel/private_html/backup/$dataname.sql"
+echo "Link download: http://$server_ip:$port/backup/$dataname.sql"
+echo ""
+echo "******************************************************************************************"
+echo ""
+mysql -BNe "show tables" $dataname | tr '\n' ','  | sed -e 's/,/`,`/g' | sed -e 's/,`$//' | sed -e 's/^/`/' | awk '{print "SET FOREIGN_KEY_CHECKS = 0;DROP TABLE IF EXISTS " $1 ";SET FOREIGN_KEY_CHECKS = 1;"}' | mysql $dataname
+else
+
+
+echo ""
+echo "The system found your database on google drive but did not find your database in VPS, maybe you deleted it."
+echo ""
+echo "The system will automatically create Database for you $dataname and enter the recovery data"
+
+
+echo -n "Input User Name and press [ENTER]: "
+read username
+if [ "$username" = "" ]; then
+        username="$dataname"
+        echo "If you do not enter information, the system will automatically retrieve with information $dataname"
+fi
+
+echo -n "Enter the password for the user name $username [ENTER]: "
+read password
+if [ "$password" = "" ]; then
+        password="$dataname"
+        echo "If you do not enter information, the system will automatically retrieve with information $dataname"
+fi
+
+    cat > "/tmp/config.temp" <<END
+CREATE DATABASE $dataname COLLATE utf8_general_ci;
+CREATE USER '$username'@'localhost' IDENTIFIED BY '$password';
+GRANT ALL PRIVILEGES ON $dataname . * TO '$username'@'localhost';
+FLUSH PRIVILEGES;
+END
+
+mysql < /tmp/config.temp
+rm -f /tmp/config.temp
+
+clear
+echo "created database with name $dataname success !"
+echo "==================="
+echo "Information detail:"
+printf "Database Name: $dataname\nDatabase User: $username\nDatabase Password: $password\n\n"
+
+fi
+
+## donwload file tu google
+echo "Download Database from Google Drive"
+
+cd /opt/tinopanel/private_html/restore
+rm -rf /opt/tinopanel/private_html/restore/$dataname.sql
+rclone copy "remote:/$SERVER_NAME/$date_backup/mysql/$dataname.sql.gz" /opt/tinopanel/private_html/restore/ --fast-list --transfers=40 --checkers=40 --tpslimit=10 --drive-chunk-size=1M --verbose --log-file=/root/Rclone.log
+
+echo "Backup has successfully downloaded, begin to recover!"
+sleep 3
+
+
+cd /opt/tinopanel/private_html/restore 
+echo "Deleted all data inside $dataname success!"
+echo "start recovery $dataname from Google Drive:"
+gunzip $dataname.sql.gz
+mysql $dataname < $dataname.sql
+
+rm -rf /opt/tinopanel/private_html/restore/$dataname.sql.gz;
+echo "Restore success database name $dataname at a time : $day-$month-$year"
+echo "Have a nice day!"
+else
+   echo "The system could not find any backups on : $day-$month$year"
+   echo "See you again... !!"
+fi
+/etc/quicklemp/menu/drive_

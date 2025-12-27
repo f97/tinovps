@@ -1,0 +1,37 @@
+admin_port="7979"
+# @author: Lãng Tử Cô Độc
+# @website:  https://tinohost.com, https://kienthuclinux.com
+# @since: 2020
+printf "=========================================================================\n"
+printf "                Update TinoVPS Script!!! \n"
+printf "=========================================================================\n"
+server_ip=$(dig -4 TXT +short o-o.myaddr.l.google.com @ns1.google.com | sed -e 's/\"//g')
+sleep 3
+mkdir -p /etc/quicklemp/menu
+cd /etc/quicklemp/menu
+curl -o menu.zip --connect-timeout 10 -m 10 --speed-limit 10 --speed-time 10 https://scripts.tino.org/menu.zip &> /dev/null
+
+yes | unzip menu.zip &> /dev/null
+rm -rf menu.zip	 &> /dev/null
+find ./* -type f -exec chmod +x {} \;  &> /dev/null
+cd /etc/quicklemp/menu
+yes | mv tino /usr/bin/	 &> /dev/null
+
+cd /etc/nginx/conf.d/
+curl -o  tino-master.zip --connect-timeout 10 -m 10 --speed-limit 10 --speed-time 10 https://scripts.tino.org/tino-master.zip &> /dev/null
+yes | unzip tino-master.zip &> /dev/null
+rm -rf tino-master.zip	 &> /dev/null
+
+checkserver_ip=$(cat /etc/nginx/conf.d/custom/admin-ips.conf | grep $server_ip)
+if [ "$checkserver_ip" = "" ]; then
+echo -e "\nallow $server_ip;" >> /etc/nginx/conf.d/custom/admin-ips.conf
+nginx -s reload
+fi
+csfnginx=$(cat /etc/csf/csf.pignore | grep nginx)
+if [ "$csfnginx" = "" ]; then
+echo "exe:/usr/sbin/nginx" >> /etc/csf/csf.pignore
+csf -r
+fi
+
+echo ""
+echo "UPDATE SCRIPT DONE!!"

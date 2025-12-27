@@ -1,0 +1,142 @@
+server_ip=$(dig -4 TXT +short o-o.myaddr.l.google.com @ns1.google.com | sed -e 's/\"//g')
+SERVER_NAME=BACKUP_$server_ip
+port=$(</etc/quicklemp/port.txt)
+# @author: Lãng Tử Cô Độc
+# @website:  https://tinohost.com, https://kienthuclinux.com
+# @since: 2020clear
+
+
+echo -n "Enter the name of the Database you want to restore and press [ENTER]: "
+read dataname
+
+if [ "$dataname" = "mysql" ] || [ "$dataname" = "infomation_schema" ] || [ "$dataname" = "performance_schema" ]; then
+echo "You cannot set up system database storage"
+echo "See you again...!"
+/etc/quicklemp/menu/drive_
+fi
+
+
+counter=1
+while [ $counter == 1 ]
+do
+echo ""
+echo "------------------------"
+echo "VD: If you choose is 7, then CODE Website will be restored 7 day ago"
+echo "VD: If you choose is 0, then CODE Website will be restored backup at 2h30:AM to day"
+echo ""
+echo -n "Pls choose number day ago you want Restore >"
+read number
+if ! [[ "$number" =~ ^[0-9]+$ ]]; then
+echo ""
+echo "Please enter the correct format as number:"
+continue;
+fi
+
+if [ "0" -gt "$number" ]; then
+echo "Please enter the correct format as number:"
+continue;
+fi
+
+
+echo "You choose the recovery date from Google Drive is:"
+date +%F --date="$number days ago "
+break;
+done
+
+date_backup=$(date +%F --date="$number days ago")
+
+
+
+rclone ls remote:/$SERVER_NAME/$date_backup/mysql/ | grep $dataname > /tmp/test
+
+if [ -s /tmp/test ]; then
+
+# tao folder tai backup mysql hien tai
+
+
+mkdir -p /opt/tinopanel/private_html/restore/
+
+if [ -f /var/lib/mysql/$dataname/db.opt ]; then
+mkdir -p /opt/tinopanel/private_html/backup/
+cd /opt/tinopanel/private_html/backup/
+echo "Backup the current database... !"
+
+mysqldump $dataname > dataname.sql &> /dev/null
+echo ""
+echo "$dataname has backed up success ... "
+
+echo "******************************************************************************************"
+echo ""
+echo "Link download database now:"
+echo "Link file backup : /opt/tinopanel/private_html/backup/$dataname.sql"
+echo "Link download: http://$server_ip:$port/backup/$dataname.sql"
+echo ""
+echo "******************************************************************************************"
+echo ""
+mysql -BNe "show tables" $dataname | tr '\n' ','  | sed -e 's/,/`,`/g' | sed -e 's/,`$//' | sed -e 's/^/`/' | awk '{print "SET FOREIGN_KEY_CHECKS = 0;DROP TABLE IF EXISTS " $1 ";SET FOREIGN_KEY_CHECKS = 1;"}' | mysql $dataname
+else
+
+
+echo ""
+echo "The system found your database on google drive but did not find your database in VPS, maybe you deleted it."
+echo ""
+echo "The system will automatically create Database for you $dataname and enter the recovery data"
+
+
+echo -n "Input User Name and press [ENTER]: "
+read username
+if [ "$username" = "" ]; then
+        username="$dataname"
+        echo "If you do not enter information, the system will automatically retrieve with information $dataname"
+fi
+
+echo -n "Enter the password for the user name $username [ENTER]: "
+read password
+if [ "$password" = "" ]; then
+        password="$dataname"
+        echo "If you do not enter information, the system will automatically retrieve with information $dataname"
+fi
+
+    cat > "/tmp/config.temp" <<END
+CREATE DATABASE $dataname COLLATE utf8_general_ci;
+CREATE USER '$username'@'localhost' IDENTIFIED BY '$password';
+GRANT ALL PRIVILEGES ON $dataname . * TO '$username'@'localhost';
+FLUSH PRIVILEGES;
+END
+
+mysql < /tmp/config.temp
+rm -f /tmp/config.temp
+
+clear
+echo "created database with name $dataname success !"
+echo "==================="
+echo "Information detail:"
+printf "Database Name: $dataname\nDatabase User: $username\nDatabase Password: $password\n\n"
+
+fi
+
+## donwload file tu google
+echo "Download Database from Google Drive"
+
+cd /opt/tinopanel/private_html/restore
+rm -rf /opt/tinopanel/private_html/restore/$dataname.sql
+rclone copy "remote:/$SERVER_NAME/$date_backup/mysql/$dataname.sql.gz" /opt/tinopanel/private_html/restore/ --fast-list --transfers=40 --checkers=40 --tpslimit=10 --drive-chunk-size=1M --verbose --log-file=/root/Rclone.log
+
+echo "Backup has successfully downloaded, begin to recover!"
+sleep 3
+
+
+cd /opt/tinopanel/private_html/restore 
+echo "deleted all data inside  $dataname success !"
+echo "start recovery $dataname from Google Drive:"
+gunzip $dataname.sql.gz
+mysql $dataname < $dataname.sql
+
+rm -rf /opt/tinopanel/private_html/restore/$dataname.sql.gz;
+echo "Successfully restored database name $dataname at a time: $day-$month-$year"
+echo "Have a nice day!"
+else
+   echo "The system could not find any backups on : $day-$month-$year"
+   echo "See you again... !!"
+fi
+/etc/quicklemp/menu/drive_

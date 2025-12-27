@@ -1,0 +1,236 @@
+TINOPOOL(){
+cd /opt/php/php$sock_tino/etc/php-fpm.d/
+
+cat > "/opt/php/php$sock_tino/etc/php-fpm.d/tinopanel.conf" <<END
+[tinopanel]
+listen = /dev/shm/tinopanel.$sock_tino.sock;
+user = tinopanel
+group = tinopanel
+listen.owner = nginx
+listen.group = nginx
+listen.mode = 0644
+;listen.allowed_clients = 127.0.0.1
+pm = ondemand
+pm.max_children = 15
+pm.start_servers = 5
+pm.min_spare_servers = 3
+pm.max_spare_servers = 10
+pm.max_requests = 500
+END
+
+cat > /etc/opcache-default.blacklist <<END
+/home/*/public_html/wp-content/plugins/backwpup/*
+/home/*/public_html/wp-content/plugins/duplicator/*
+/home/*/public_html/wp-content/plugins/updraftplus/*
+/opt/tinopanel/private_html/
+END
+
+rm -rf /opt/php/php$sock_tino/etc/php-fpm.d/www.conf
+}
+COMPILE_PHP() {
+
+mkdir -p /opt/php/
+
+yum remove php$sock_tino* -y
+
+for x in php$sock_tino php$sock_tino-php-calendar php$sock_tino-php-gd php$sock_tino-php-curl php$sock_tino-php-inline-optimization php$sock_tino-php-bz2 php$sock_tino-php-zlib php$sock_tino-php-sockets php$sock_tino-php-sysvsem php$sock_tino-php-sysvshm php$sock_tino-php-pcntl php$sock_tino-php-mbregex php$sock_tino-php-mhash php$sock_tino-php-pdo-mysql php$sock_tino-php-mysqli php$sock_tino-php-openssl php$sock_tino-php-ftp php$sock_tino-php-opcache php$sock_tino-php-bcmath php$sock_tino-php-fpm  php$sock_tino-php-mbstring php$sock_tino-php-pear  php$sock_tino-php-freetype php$sock_tino-php-jpeg php$sock_tino-php-soap php$sock_tino-php-intl  php$sock_tino-php-exif  php$sock_tino-php-pecl-zip php$sock_tino-php-redis php$sock_tino-php-memcached php$sock_tino-php-imagick  php$sock_tino-php-ioncube-loader php$sock_tino-php-zstd php$sock_tino-php-xmlrpc php$sock_tino-php-pgsql php$sock_tino-php-imap php$sock_tino-php-brotli
+do
+yum install $x -y
+done
+
+
+yum install php$sock_tino-php-devel -y
+
+if [ "$sock_tino" -lt 56 ]; then
+  ln -s /opt/remi/php$sock_tino/root/etc /etc/opt/remi/php$sock_tino
+  
+fi
+
+ln -s /etc/opt/remi/php$sock_tino/ /opt/php/
+ln -s /etc/opt/remi/php$sock_tino/ /opt/php/php$sock_tino/etc
+unlink /etc/opt/remi/php$sock_tino/php$sock_tino
+ln -s /opt/remi/php$sock_tino/root/bin/ /opt/php/php$sock_tino/
+
+mkdir -p /opt/php/php$sock_tino/var/
+ln -sf /var/opt/remi/php$sock_tino/run /opt/php/php$sock_tino/var/
+
+
+mkdir -p /opt/php/php$sock_tino/lib/
+sleep 5
+
+ln -sf /etc/opt/remi/php$sock_tino/php.ini /opt/php/php$sock_tino/lib/
+
+cd /opt/php/php$sock_tino/bin
+echo "" |./pecl channel-update pecl.php.net
+echo "" |./pecl uninstall zip >/dev/null 2>&1
+echo "" |./pecl install zip  >/dev/null 2>&1
+
+
+
+upload_max_filesize=2048M
+post_max_size=2048M
+max_execution_time=300
+max_input_time=300
+memory_limit=512M
+
+for key in upload_max_filesize post_max_size max_execution_time max_input_time memory_limit
+do
+ sed -i "s/^\($key\).*/\1 $(eval echo = \${$key})/" /opt/php/php$sock_tino/lib/php.ini
+done
+
+
+for key in upload_max_filesize post_max_size max_execution_time max_input_time memory_limit
+do
+ sed -i "s/^\($key\).*/\1 $(eval echo = \${$key})/" /etc/opt/remi/php$sock_tino/php.ini 
+done
+
+
+cat > "/opt/php/php$sock_tino/etc/php-fpm.conf" <<END
+[global]
+pid = run/php-fpm.pid
+include=/opt/php/php$sock_tino/etc/php-fpm.d/*.conf
+END
+mkdir -p /opt/php/php$sock_tino/etc/php-fpm.d/ >/dev/null 2>&1
+ln -s /lib/systemd/system/php$sock_tino-php-fpm.service /lib/systemd/system/php-fpm-$sock_tino.service
+}
+
+
+
+echo ""
+echo "====================================================================================="
+echo "Menu Board > Manage Setting PHP > Install More Versions PHP"
+echo "/-------------------------/"
+echo "- Install More Versions PHP"
+echo "/-----------------------------------------------------------------------------------/"
+echo "Dung nhieu phien ban php, ban vui long nen su dung vps tu 2GB ram tro len de hoat dong on dinh..."
+echo "The installation process takes about 20 minutes..."
+echo ""
+echo "Cac phien ban php da cai dat tren VPS:"
+cd /opt/php/
+ls
+echo ""
+sleep 2
+
+
+system_version=$(rpm -E %{rhel})
+
+yum -y install gawk bc wget lsof
+clear
+sleep 2
+echo "Cac phien ban php da cai dat tren VPS:"
+cd /opt/php/
+ls
+echo ""
+echo "Moi phien ban php ban cai dat them se chiem khoang 200MB dung luong O cung va 15MB RAM"
+echo "De moi chuc nang tren VPS hoat dong on dinh, Chung toi khuyen dung VPS co tu 2GB ram tro len"
+echo "****************************************"
+echo "RHEL 7 (centos 7 ...) Support version php : 5.4 --> 8.2"
+echo "RHEL 8 (centos 8, almalinux 8 ...) Support version php : 5.6 --> 8.2"
+echo "RHEL 9 (centos 9, almalinux 9 ...) Support version php : 7.4 --> 8.2"
+echo "****************************************"
+echo ""
+printf "Vui long tuy chon phien ban php ban muon cai dat ben duoi:\n"
+
+
+arr_ver=("5.4" "5.5" "5.6" "7.0" "7.1" "7.2" "7.3" "7.4" "8.0" "8.1" "8.2")
+arr_go=("5_4" "5_5" "5_6" "7_0" "7_1" "7_2" "7_3" "7_4" "8_0" "8_1" "8_2")
+arr_sock=("54" "55" "56" "70" "71" "72" "73" "74" "80" "81" "82")
+
+if [ "$system_version" -eq 7 ]; then
+arr_ver=("5.4" "5.5" "5.6" "7.0" "7.1" "7.2" "7.3" "7.4" "8.0" "8.1" "8.2")
+arr_go=("5_4" "5_5" "5_6" "7_0" "7_1" "7_2" "7_3" "7_4" "8_0" "8_1" "8_2")
+arr_sock=("54" "55" "56" "70" "71" "72" "73" "74" "80" "81" "82")
+fi
+if [ "$system_version" -eq 8 ]; then
+arr_ver=("5.6" "7.0" "7.1" "7.2" "7.3" "7.4" "8.0" "8.1" "8.2")
+arr_go=("5_6" "7_0" "7_1" "7_2" "7_3" "7_4" "8_0" "8_1" "8_2")
+arr_sock=("56" "70" "71" "72" "73" "74" "80" "81" "82")
+fi
+if [ "$system_version" -eq 9 ]; then
+arr_ver=("7.4" "8.0" "8.1" "8.2")
+arr_go=("7_4" "8_0" "8_1" "8_2")
+arr_sock=("74" "80" "81" "82")
+fi
+
+
+
+
+for ((i = 0; i < ${#arr_ver[@]}; i++)); do
+    php_version="${arr_ver[i]}"
+    php_go="${arr_go[i]}"
+    sock_tino="${arr_sock[i]}"
+   
+
+admin_port="7979"
+
+echo "phien ban php cai dat la php $php_version , thoi gian cai dat khoang 5-15 phut" 
+
+grep -q -F 'exclude=nginx*' /etc/yum.repos.d/epel.repo || sed -i '/\[epel\]/a\exclude=nginx*' /etc/yum.repos.d/epel.repo
+
+tino='/root/tino'
+
+phptien="_"
+php_pick=($php_ver1.$php_ver)
+php_com=($php_ver1$phptien$php_ver)
+echo "You choose version $php_pick"
+
+
+
+yum remove php$sock_tino* -y 
+
+unlink /opt/php/php$sock_tino
+rm -rf /opt/php/php$sock_tino
+rm -rf  /lib/systemd/system/php$sock_tino-php-fpm.service
+unlink /lib/systemd/system/php-fpm-$sock_tino.service
+rm -rf /lib/systemd/system/php-fpm-$sock_tino.service
+service php-fpm-$sock_tino stop
+rm -rf /opt/remi/php$sock_tino
+
+systemctl daemon-reload
+
+
+COMPILE_PHP
+TINOPOOL
+
+
+systemctl daemon-reload
+
+ln -sf /etc/opt/remi/php$sock_tino/php.ini /opt/php/php$sock_tino/lib/
+
+
+
+for domain in `ls /etc/quicklemp/domains/`; do
+{
+
+
+total_ram=$(free -m | awk 'NR==2{print $2}')
+php_ram=40
+pmmax_children=$((total_ram / php_ram))
+pmstart_servers=$((pmmax_children * 10 / 100 + 1))
+pmmin_spare_servers=$((pmmax_children * 5 / 100 + 1))
+pmmax_spare_servers=$((pmmax_children * 20 / 100 + 1))
+pmmax_requests=1500
+
+user=$(cat /etc/quicklemp/domains/$domain/user)
+cat > "/opt/php/php$sock_tino/etc/php-fpm.d/$domain.conf" <<END
+[$domain]
+listen = /dev/shm/$domain.php$sock_tino.sock;
+user = $user
+group = $user
+listen.owner = nginx
+listen.group = nginx
+listen.mode = 0644
+pm = ondemand
+pm.max_children = $pmmax_children
+pm.start_servers = $pmstart_servers
+pm.min_spare_servers = $pmmin_spare_servers
+pm.max_spare_servers = $pmmax_spare_servers
+pm.max_requests = $pmmax_requests
+END
+};
+done
+
+service php-fpm-$sock_tino restart
+echo "Update completed"
+done
+/etc/quicklemp/menu/php_

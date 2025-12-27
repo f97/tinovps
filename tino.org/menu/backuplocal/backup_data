@@ -1,0 +1,53 @@
+# @author: Nguyen Van Phong from TinoHost
+# @website:  https://tinohost.com, https://kienthuclinux.com
+# @since: 2020
+
+my_ip=$(ip route get 8.8.8.8 | awk -F"src " 'NR==1{split($2,a," ");print a[1]}')
+port=$(</etc/quicklemp/port.txt)
+saoluudata ()
+{
+echo "Backing up the database $dataname..."
+mkdir -p /opt/tinopanel/private_html/backup/$dataname
+cd /opt/tinopanel/private_html/backup/$dataname
+mysqldump $dataname | gzip -9 > $dataname.sql.gz
+
+echo "Backup successful!"
+echo "Link Backup File: /opt/tinopanel/private_html/backup/$dataname/$dataname.sql.gz"
+echo "Link download: http://$my_ip:$port/backup/$dataname/$dataname.sql.gz"
+}
+echo ""
+echo "====================================================================================="
+echo "Menu Board > Backup/Restore On Localhost > Backup Database 1 Website"
+echo "/-------------------------/"
+echo "- Backup Database 1 Website"
+echo "/-----------------------------------------------------------------------------------/"
+echo -n "Enter the name of the database you want to back up and press [ENTER]: "
+read dataname
+
+if [ -f /var/lib/mysql/$dataname/db.opt ]; then
+echo "The system found the Database $dataname on VPS."
+if [ -f /opt/tinopanel/private_html/backup/$dataname/$dataname.sql.gz ]; then
+read -r -p "Found an old backup file, do you want to delete and write a new backup data ?. [y/N] " response
+case $response in
+    [yY][eE][sS]|[yY])
+        rm -rf /opt/tinopanel/private_html/backup/$dataname/$dataname.sql.gz
+        saoluudata
+        ;;
+    *)
+	echo "Old backup file path that you can download ::"
+	echo "Link Backup File : /opt/tinopanel/private_html/backup/$dataname/$dataname.sql.gz"
+	echo "Link download: http://$my_ip:$port/backup/$dataname/$dataname.sql.gz"
+      	echo "See you again....!"
+        ;;
+esac
+else
+    	saoluudata
+fi
+
+else
+echo "Err..., System not found $dataname on VPS, please try again!"
+echo "See you again....!"
+/etc/quicklemp/menu/backuplocal_
+fi
+
+/etc/quicklemp/menu/backuplocal_

@@ -1,0 +1,27 @@
+# @author: Nguyen Van Phong from TinoHost
+# @website:  https://tinohost.com, https://kienthuclinux.com
+# @since: 2020
+echo ""
+echo "====================================================================================="
+echo "Menu Board > Backup/Restore On Localhost > Delete All Local Backup"
+echo "/-------------------------/"
+echo "- Delete All Local Backup"
+echo "/-----------------------------------------------------------------------------------/"
+read -r -p "If you agree to delete all local backups, this operation will not be restored. ? [y/N] " response
+case $response in
+    [yY][eE][sS]|[yY])
+
+rm -rf /opt/tinopanel/private_html/backupallsite/
+rm -rf /opt/tinopanel/private_html/backup
+for D in /etc/quicklemp/domains/*; do
+	if [ -d "${D}" ]; then #If a directory
+		domain=${D##*/} # Domain name
+		rm -rf /opt/tinopanel/private_html/$domain
+	fi
+done
+
+echo "All Local Backup Deleted Succesfully.!";
+echo '';
+esac
+
+/etc/quicklemp/menu/backuplocal_

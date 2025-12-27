@@ -1,0 +1,144 @@
+server_ip=$(ip route get 8.8.8.8 | awk -F"src " 'NR==1{split($2,a," ");print a[1]}')
+SERVER_NAME=BACKUP_$server_ip
+port=$(</etc/quicklemp/port.txt)
+# @author: Lãng Tử Cô Độc
+# @website:  https://tinohost.com, https://kienthuclinux.com
+# @since: 2020
+clear
+echo ""
+echo "====================================================================================="
+echo "Menu Board > Manage Domains > Change vHost PHP"
+echo "/-------------------------/"
+echo "- Change vHost PHP"
+echo "/-----------------------------------------------------------------------------------/"
+
+cd /etc/quicklemp/domains/
+prompt="Please select the corresponding domain name you want to change PHP vHost : "
+
+options=( $(ls -d *) )
+PS3="$prompt "
+
+select opt in "${options[@]}" "Quit" ; do
+    if (( REPLY == 1 + ${#options[@]} )) ; then
+        /etc/quicklemp/menu/domain_
+
+    elif (( REPLY > 0 && REPLY <= ${#options[@]} )) ; then
+                echo "You are choosing a domain name : $opt"
+                                domain=$opt
+        break
+    else
+        echo "Wrong option, please try again with the option available above: "
+    fi
+done
+echo "/-------------------------/"
+prompt="Enter your selection [1-11]: "
+php_version=$(</etc/quicklemp/domains/$domain/php_version)
+options=("WordPress" "WordPress + WP-Rocket" "WordPress + Fastcgi Cache" "PrestaShop" "Lavarel" "OpenCart" "WordPress Multisite SubDomain" "WordPress Multisite SubDirectory" "WordPress Multisite Subdirectory + Fastcgi Cache" "WordPress Multisite Subdomain + Fastcgi Cache" "VHOST PHP Default")
+PS3="$prompt"
+select opt in "${options[@]}"; do
+    case "$REPLY" in
+    1) php_version="fpm-wordpress-users"; break;;
+	2) php_version="fpm-wordpress-wprocket-users"; break;;
+    3) php_version="fpm-wordpress-cache-users"; break;;
+    4) php_version="fpm-prestashop-users"; break;;
+    5) php_version="fpm-laravel-users"; break;;
+    6) php_version="fpm-opencart-users"; break;;
+    7) php_version="fpm-wordpress-sub-users"; break;;
+    8) php_version="fpm-wordpress-mu-users"; break;;
+    9) php_version="fpm-wordpress-mu-cache-users"; break;;
+    10) php_version="fpm-wordpress-sub-cache-users"; break;;
+    11) php_version="fpm-default-users"; break;;
+    $(( ${#options[@]}+1 )) ) printf "\nThe system will perform the installation PHP 7.4\n"; break;;
+    *) printf "If you are entering the wrong information, the system will remain the same configuration. !!! \n";
+	opt=$(</etc/quicklemp/domains/$domain/php_tem) break;;
+    esac
+done
+php_tem=$opt
+old_php_version=$(</etc/quicklemp/domains/$domain/php_version)
+user=$(</etc/quicklemp/domains/$domain/user)
+
+echo ""
+echo ""
+
+
+cat > "/etc/quicklemp/domains/$domain/php_tem" <<END
+$php_tem
+END
+
+rm -rf /etc/nginx/conf.d/addon_confs/$domain/fpm-*
+cp -r /etc/nginx/conf.d/custom/$php_version.conf /etc/nginx/conf.d/addon_confs/$domain/$php_version.conf 
+
+
+cat > "/etc/quicklemp/domains/$domain/php_version" <<END
+$php_version
+END
+if [ "$php_version" = "fpm-laravel-users" ]; then
+sed -i "s/$domain\/public_html;/$domain\/public_html\/public;/g" /etc/nginx/conf.d/vhosts/$domain.ssl.conf
+sed -i "s/$domain\/public_html;/$domain\/public_html\/public;/g" /etc/nginx/conf.d/vhosts/$domain.conf
+fi
+
+
+##################################################
+aliase_file="/etc/quicklemp/domains/$domain/aliase"
+if [ -f "$aliase_file" ]; then
+    aliase_domain=$(<"$aliase_file")
+else
+    aliase_domain=""
+fi
+
+if [[ -n $aliase_domain && -f "/etc/nginx/conf.d/vhosts/${aliase_domain}.conf" ]]; then
+    sed -i "s/$domain\/public_html;/$aliase_domain\/public_html;/g" /etc/nginx/conf.d/vhosts/$domain.ssl.conf
+    sed -i "s/$domain\/public_html;/$aliase_domain\/public_html;/g" /etc/nginx/conf.d/vhosts/$domain.conf
+	
+fi
+
+if ! systemctl is-active --quiet monit; then
+yum install monit -y  &>/dev/null
+
+rm -rf /etc/monit.d/*
+cat > "/etc/monit.d/logging" <<END
+# log to monit.log
+set logfile /var/log/monit.log
+END
+fi
+
+cat > "/etc/monit.d/disk" <<END
+check device rootfs with path /
+  if space usage > 98% then exec "/bin/bash -c '/usr/bin/find /var/log/messages-* /home/*/logs/access_*.gz /home/*/logs/error_*.gz -delete'"
+END
+cat > "/etc/monit.d/mysql" <<END
+check process mysql with pidfile /var/lib/mysql/sv.pid
+  start program = "/usr/bin/systemctl start mysql"
+  stop program  = "/usr/bin/systemctl stop mysql"
+  if 5 restarts within 5 cycles then timeout
+END
+cat > "/etc/monit.d/nginx" <<END
+check process nginx with pidfile /var/run/nginx.pid
+  start program = "/usr/bin/systemctl start nginx"
+  stop program  = "/usr/bin/systemctl stop nginx"
+END
+
+
+for dir in /opt/php/php*; do
+  if [ -d "$dir" ]; then
+    php="${dir##*/}"
+    php_ver="${php:3}"
+    php_full="php-fpm-${php_ver}"
+
+    cat > "/etc/monit.d/php$php_ver" <<END
+check process php$php_ver with pidfile /opt/php/php$php_ver/var/run/php-fpm.pid
+  start program = "/usr/bin/systemctl start $php_full"
+  stop program = "/usr/bin/systemctl stop $php_full"
+END
+  fi
+done
+systemctl restart monit
+systemctl enable monit
+
+nginx -s reload  &>/dev/null
+
+##################################################
+
+echo "$domain vHost PHP is : $php_tem !"
+
+/etc/quicklemp/menu/domain_

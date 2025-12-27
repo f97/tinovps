@@ -1,0 +1,128 @@
+# @author: Nguyen Van Phong from TinoHost
+# @website:  https://tinohost.com, https://kienthuclinux.com
+# @since: 2020
+echo ""
+echo "====================================================================================="
+echo "Menu Board > Manage ddos-mitigation > OFF Auto ANTI DDOS Server"
+echo "/-------------------------/"
+echo "OFF Auto ANTI DDOS Server"
+echo "/-----------------------------------------------------------------------------------/"
+
+cd /etc/quicklemp/domains/
+
+
+echo ""
+echo "TURN OFF - AUTO ANTI DDOS LAYER 7 WHEN VPS BEING ATTACK... "
+
+sleep 10
+
+for opt in `ls /etc/quicklemp/domains/`; do
+{
+echo "TURN OFF BLOCK ATTACK DDOS LAYER 7 for $opt"
+ 
+rm -rf /etc/nginx/conf.d/addon_confs/$opt/checkcookie.conf
+rm -rf /etc/nginx/conf.d/addon_confs/$opt/checkcookieload.conf
+echo "no" > /etc/quicklemp/domains/$opt/ddos-mitigation; &>/dev/null
+
+};
+done;
+
+#########################
+
+mkdir -p /opt/antiddos
+
+cat >  "/etc/systemd/system/antiddostino.service" <<END
+[Unit]
+ Description= ON - OFF anti DDOS Layer7
+ 
+[Service]
+ ExecStart=/opt/antiddos/checkload
+
+[Install]
+ WantedBy=default.target
+ 
+END
+
+cat > "/opt/antiddos/checkload" <<END
+#!/bin/sh
+while [ 1 -gt 0 ]
+do
+    num=\$(grep ^cpu\\scores /proc/cpuinfo | uniq |  awk '{print \$4}')
+    num=$((num * 4))
+    load=\$(cat /proc/loadavg |awk '{print \$1}'|cut -d "." -f1)
+    
+    if [ "\$load" -gt "\$num" ] && [ "\$load" -gt 10 ]; then
+        /usr/sbin/migatedddos on;
+        
+        topnum=\$(cat /home/*/logs/access*_log | awk -v start="\$(date -d '30 minutes ago' +[%d/%b/%Y:%H:%M:%S])" -v end="\$(date +[%d/%b/%Y:%H:%M:%S])" '\$4 > start && \$4 < end' | awk '{ print \$1}' | sort | uniq -c | sort -nr | head -n 1 |  awk '{ print \$1}')
+        topip=\$(cat /home/*/logs/access*_log | awk -v start="\$(date -d '30 minutes ago' +[%d/%b/%Y:%H:%M:%S])" -v end="\$(date +[%d/%b/%Y:%H:%M:%S])" '\$4 > start && \$4 < end' | awk '{ print \$1}' | sort | uniq -c | sort -nr | head -n 1 |  awk '{ print \$2}')
+        
+        if [ "\$topnum" -gt 3000 ]; then
+			csf -e  &> /dev/null
+            csf -d  "\$topip"
+            echo "\$(date):\$topip:\$topnum"  >> /opt/antiddos/checkload.log
+        else
+            echo "\$(date)" >> /opt/antiddos/checkload.log
+        fi
+        
+        sleep 900;
+        /usr/sbin/migatedddos off;
+    fi
+    sleep 1;
+done
+END
+
+cat >  "/usr/sbin/migatedddos" <<END
+#!/bin/bash
+value=\$1
+if [ "\$value" == "on" ]
+then
+    sed -i '/testcookie\ /s/off/on/' /etc/nginx/conf.d/addon_confs/*/checkcookie.conf
+    echo " migatedddos  has been enable from the vhost configuration!"
+
+	
+elif [ "\$value" == "off" ]
+then
+    sed -i '/testcookie\ /s/on/off/' /etc/nginx/conf.d/addon_confs/*/checkcookie.conf
+    echo " migatedddos  has been disable from the vhost configuration!"
+else
+   echo 'Warning: Import the environment variable "on" or "off" to use!'
+fi
+/usr/sbin/nginx -s reload
+
+#systemctl restart php-fpm-74.service
+
+for D in /opt/php/*; do
+	if [ -d "\${D}" ]; then #If a directory
+		php=\${D##*/} # Domain name
+		php_ver=\${php:3}
+		php_full="php-fpm-\${php_ver}"
+	
+	echo "restart \$php"
+	service php-fpm-\$php_ver restart
+fi
+done
+rm -rf /var/lib/nginx/cache/fastcgi/*
+
+END
+
+chmod +x /etc/systemd/system/antiddostino.service
+chmod +x /usr/sbin/migatedddos
+
+systemctl enable antiddostino
+systemctl stop antiddostino
+
+
+#########################
+
+
+chmod +x /opt/antiddos/checkload
+nginx -s reload
+
+
+echo "off" > /etc/quicklemp/antiddos
+
+echo "Turned OFF ddos-mitigation for ALL DOMAIN success.!"
+
+/etc/quicklemp/menu/ddos-mitigation_
+

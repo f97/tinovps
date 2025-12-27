@@ -1,0 +1,119 @@
+server_ip=$(dig -4 TXT +short o-o.myaddr.l.google.com @ns1.google.com | sed -e 's/\"//g')
+SERVER_NAME=BACKUP_$server_ip
+port=$(</etc/quicklemp/port.txt)
+# @author: Lãng Tử Cô Độc
+# @website:  https://tinohost.com, https://kienthuclinux.com
+# @since: 2020
+clear
+echo ""
+echo "====================================================================================="
+echo "Menu Board > Backup/Restore from Google Drive > Restore Code From GD/Choose Date"
+echo "/-------------------------/"
+echo "- Restore Code From GD/Choose Date"
+echo "/-----------------------------------------------------------------------------------/"
+cd /etc/quicklemp/domains/
+prompt="Select the domain name that you want to recover data from Google Drive>:"
+
+options=( $(ls -d *) )
+PS3="$prompt "
+
+select opt in "${options[@]}" "Quit" ; do
+    if (( REPLY == 1 + ${#options[@]} )) ; then
+        /etc/quicklemp/menu/drive_
+
+    elif (( REPLY > 0 && REPLY <= ${#options[@]} )) ; then
+                echo "You choose the recovery domain name is: $opt"
+				domain=$opt
+        break
+    else
+        echo "Wrong option, please try again with the above options: "
+    fi
+done
+
+counter=1
+while [ $counter == 1 ]
+do
+echo ""
+echo "Please select a date to restore according to syntax Day/Month/Year Ex: 23062020 (Day 23, Month 06, Year 2020)"
+echo "------------------------------------"
+echo -n "Please select the date you wish to recover DDMMYYYY >"
+read date
+if [ ${#date} -eq 8 ]; then
+    year=${date:4:8}
+    month=${date:2:2}
+    day=${date:0:2}
+    month30="04 06 09 11"
+    leapyear=$((year%4)) # if leapyear this is 0
+    if [ "$year" -ge 1901 -a "$month" -le 12 -a "$day" -le 31 ]; then
+            if [ "$month" -eq 02 -a "$day" -gt 29 ] || [ "$leapyear" -ne 0 -a "$month" -eq 02 -a "$day" -gt 28 ]; then
+                    echo "Too many days for February... try again"; /etc/quicklemp/menu/drive_
+            fi
+            if [[ "$month30" =~ "$month" ]] && [ "$day" -eq 31 ]; then
+                    echo "Month $month cannot have 31 days... try again"; /etc/quicklemp/menu/drive_
+            fi
+    else echo "The date entered is not in the correct format!"; continue;
+	fi
+else echo "The date entered is not in the correct format"; continue;
+fi
+echo "You are selecting a restore date of : Day: $day  Month: $month  Year: $year "
+break;
+done
+
+year+="-"
+month+="-"
+date_backup=$(echo "$year$month$day")
+
+rclone lsd remote:/$SERVER_NAME/ | grep $date_backup > /tmp/test
+
+if [ -s /tmp/test ]; then
+
+user=$(</etc/quicklemp/domains/$domain/user)
+
+# tao folder tai backup .
+mkdir -p /root/backup_restore/$domain/
+
+mkdir -p /opt/tinopanel/private_html/$domain/backup
+
+cd /home/$domain/public_html/
+echo "Restore for $domain now... !"
+tar czf /opt/tinopanel/private_html/$domain/backup/$domain.tar.gz .
+echo ""
+echo "Website data backup for $domain was successful..."
+
+echo "******************************************************************************************"
+echo ""
+echo "Link download code website $domain now :"
+echo "Backup file path at : /opt/tinopanel/private_html/$website/backup/$domain.tar.gz"
+echo "Link download : http://$my_ip:$port/$domain/backup/$domain.tar.gz"
+echo ""
+echo "******************************************************************************************"
+echo ""
+
+## donwload file tu google
+echo "Downloading code website from Google Drive"
+
+cd /home/$domain/public_html/
+rm -rf /home/$domain/public_html/
+rclone copy "remote:/$SERVER_NAME/$date_backup/source/$domain.zip" /home/$domain/public_html/ --fast-list --transfers=40 --checkers=40 --tpslimit=10 --drive-chunk-size=1M --verbose --log-file=/root/Rclone.log
+
+echo "The system has finished loading backup, it is starting to recover!"
+sleep 3
+
+cd /home/$domain/public_html/
+
+unzip -o $domain.zip > /dev/null
+
+#unzip -o /root/restore/$user/$domain.zip -d / > /dev/null
+
+chown -R $user:$user /home/$domain/public_html/
+rm -rf /home/$domain/public_html/$domain.zip
+echo "Successfully restored website $domain at a time: $day-$month$year"
+echo "Note that this is a data backup of the website, not a backup with the Database - you should perform a restore with the Database to synchronize your data if desired."
+echo "Have a good day!"
+
+else
+   echo "The system could not find a backup that matches the date : $day-$month-$year"
+   echo "Good bye !!!"
+fi
+/etc/quicklemp/menu/drive_
+

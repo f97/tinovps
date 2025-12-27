@@ -1,0 +1,59 @@
+server_ip=$(dig -4 TXT +short o-o.myaddr.l.google.com @ns1.google.com | sed -e 's/\"//g')
+port=$(</etc/quicklemp/port.txt)
+# @author: Lãng Tử Cô Độc
+# @website:  https://tinohost.com, https://kienthuclinux.com
+# @since: 2020clear
+echo ""
+echo "====================================================================================="
+echo "Menu Board > Manage PHP > Enable IonCube PHP"
+echo "/-------------------------/"
+echo "- Enable IonCube PHP"
+echo "/-----------------------------------------------------------------------------------/"
+
+cd /opt/php/
+prompt="Please select PHP version you want enable ioncube :"
+options=( $(ls -d *) )
+PS3="$prompt "
+select opt in "${options[@]}" "Quit" ; do
+    if (( REPLY == 1 + ${#options[@]} )) ; then
+        /etc/quicklemp/menu/php_
+
+    elif (( REPLY > 0 && REPLY <= ${#options[@]} )) ; then
+                echo ""
+        break
+
+    else
+        echo "Wrong option, please try again with the option available above: "
+    fi
+done
+php_dir=$opt
+php_ver=${opt:3}
+php_verfull=$(echo $php_ver | fold -w1 | paste -sd'.' -)
+php_dir_exten=$(/opt/php/$php_dir/bin/php -r "echo ini_get('extension_dir');") >&/dev/null
+ioncube_check=$(/opt/php/$php_dir/bin/php -m | grep ionCube)
+
+if ! [ "$ioncube_check" = "" ]; then
+echo "You have been install IonCube for PHP $php_verfull, exit!.."
+else
+
+if ! [ -f $php_dir_exten/ioncube_loader_lin_${php_verfull}.so ]; then
+cd /tmp/
+rm -rf /tmp/php.ini
+rm -rf ioncube*
+wget http://downloads.ioncube.com/loader_downloads/ioncube_loaders_lin_x86-64.tar.gz >&/dev/null
+tar -vzxf ioncube_loaders_lin_x86-64.tar.gz 
+echo "yes"|mv ioncube/*  $php_dir_exten
+fi
+
+echo "zend_extension=ioncube_loader_lin_${php_verfull}.so" >> /tmp/php.ini
+cat /opt/php/$php_dir/lib/php.ini >> /tmp/php.ini
+echo "yes"|mv /tmp/php.ini /opt/php/$php_dir/lib/php.ini
+
+service php-fpm-$php_ver restart
+
+echo ""
+echo "complete install ionCube to php $php_verfull !!!**!!!"
+echo ""
+
+fi
+/etc/quicklemp/menu/php_

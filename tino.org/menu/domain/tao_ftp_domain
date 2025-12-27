@@ -1,0 +1,130 @@
+server_ip=$(dig -4 TXT +short o-o.myaddr.l.google.com @ns1.google.com | sed -e 's/\"//g')
+gen_pass() {
+    MATRIX='0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz'
+    LENGTH=16
+    while [ ${n:=1} -le $LENGTH ]; do
+        PASS="$PASS${MATRIX:$(($RANDOM%${#MATRIX})):1}"
+        let n+=1
+    done
+    echo "$PASS"
+}
+# @author: Lãng Tử Cô Độc
+# @website:  https://tinohost.com, https://kienthuclinux.com
+# @since: 2020clear
+echo ""
+echo "====================================================================================="
+echo "Menu Board > Manage Domains > Enable FTP for domains"
+echo "/-------------------------/"
+echo "- Enable FTP for domains"
+echo "/-----------------------------------------------------------------------------------/"
+
+if [ -f /etc/vsftpd/vsftpd.conf ]; then
+killall -v vsftpd
+systemctl stop vsftpd
+yum remove vsftpd -y >& /dev/null
+rm -rf /etc/vsftpd/vsftpd.conf
+fi
+
+if ! [ -f /etc/pure-ftpd.conf ]; then
+
+#sed -i 's/#IS_CONFIGURED/IS_CONFIGURED/g' /etc/conf.d/pure-ftpd
+
+yum install pure-ftpd -y >& /dev/null
+cat > "/etc/pure-ftpd.conf" <<END
+ChrootEveryone               yes
+BrokenClientsCompatibility   no
+MaxClientsNumber             50
+Daemonize                    yes
+MaxClientsPerIP              15
+VerboseLog                   no
+DisplayDotFiles              yes
+AnonymousOnly                no
+NoAnonymous                  yes
+SyslogFacility               ftp
+DontResolve                  yes
+MaxIdleTime                  15
+PureDB                       /etc/pureftpd.pdb
+LimitRecursion               10000 8
+AnonymousCanCreateDirs       no
+MaxLoad                      4
+PassivePortRange             35000 35999
+AntiWarez                    yes
+Umask                        133:022
+MinUID                       99
+AllowUserFXP                 yes
+AllowAnonymousFXP            no
+ProhibitDotFilesWrite        no
+ProhibitDotFilesRead         no
+AutoRename                   no
+AnonymousCantUpload          no
+AltLog                       stats:/var/log/pureftpd.log
+PIDFile                      /run/pure-ftpd.pid
+CallUploadScript             no
+MaxDiskUsage                   99
+CustomerProof                yes
+END
+
+cat > "/etc/ftpusers" <<END
+root
+daemon
+bin
+sys
+adm
+lp
+uccp
+nuucp
+listen
+nobody
+noaccess
+nobody4
+END
+
+service pure-ftpd start
+systemctl enable pure-ftpd
+fi
+
+cd /etc/quicklemp/domains/
+prompt="Vui long chon domain ban muon lay tai khoan FTP:"
+
+options=( $(ls -d *) )
+PS3="$prompt "
+
+select opt in "${options[@]}" "Quit" ; do
+    if (( REPLY == 1 + ${#options[@]} )) ; then
+        /etc/quicklemp/menu/domain_
+
+    elif (( REPLY > 0 && REPLY <= ${#options[@]} )) ; then
+                echo "You are choosing a domain name : $opt"
+                                domain=$opt
+        break
+    else
+        echo "Wrong option, please try again with the option available above: "
+    fi
+done
+
+randompass=$(gen_pass)
+
+user=$(</etc/quicklemp/domains/$domain/user)
+chown -R $user:$user /home/$domain/public_html
+killall $user
+
+
+usermod $user -d /home/$domain/public_html -G tinosftp_users >& /dev/null
+echo -e "$randompass\n$randompass" | passwd $user
+
+
+#systemctl restart vsftpd >& /dev/null
+
+echo "**********************************"
+echo ""
+echo "Thong tin tai khoan FTP cho domain: $domain"
+echo "host FTP: $server_ip"
+echo "user FTP: $user"
+echo "pass FTP: $randompass"
+echo "port FTP: 21"
+echo ""
+echo "***********************************"
+sleep 5
+
+
+/etc/quicklemp/menu/domain_

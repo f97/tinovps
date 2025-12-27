@@ -1,0 +1,55 @@
+# @author: Nguyen Van Phong from TinoHost
+# @website:  https://tinohost.com, https://kienthuclinux.com
+# @since: 2020
+echo ""
+echo "====================================================================================="
+echo "Menu Board > TinoVPS Options > Wordpress > Disable cron wordpress Use crontab"
+echo "/-------------------------/"
+echo "- Disable cron wordpress Use crontab"
+echo "/-----------------------------------------------------------------------------------/"
+
+for D in /etc/quicklemp/domains/*; do
+if [ -d "${D}" ]; then #If a directory
+domain=${D##*/}
+domain_alias="www.$domain"
+    if [[ $domain == *www* ]]; then
+	    domain_alias=${domain/www./''}
+    fi
+      			
+php_dir=$(</etc/quicklemp/domains/$domain/php_dir)
+user=$(</etc/quicklemp/domains/$domain/user)
+php_version=$(</etc/quicklemp/domains/$domain/php_version)
+page_speed=$(</etc/quicklemp/domains/$domain/page_speed)
+echo ""
+php_ver=${php_dir:3}
+
+cd /home/$domain/public_html
+
+if [ ! -f ./wp-config.php ]; then
+echo "$domain is not wordpress site"
+else
+check_cronjob=$(crontab -l | grep "$domain" | grep "wp-cron.php")
+if [ "$check_cronjob" = "" ]; then
+echo "*/15 * * * * sleep $(shuf -i 1-900 -n 1); cd /home/$domain/public_html; php /home/$domain/public_html/wp-cron.php" >> /var/spool/cron/root
+fi
+
+check_cron=$(cat wp-config.php | grep "DISABLE_WP_CRON" | grep true)
+if [ "$check_cron" = "" ]; then
+php /home/$domain/public_html/wp-cron.php
+
+sed -i "/<?php/ a\
+define('DISABLE_WP_CRON', true);\
+" wp-config.php
+
+fi
+
+fi
+
+fi
+done
+
+    nginx -s reload
+
+echo ""
+echo "All domain done !!!**!!!"
+/etc/quicklemp/menu/wordpress_

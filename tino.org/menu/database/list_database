@@ -1,0 +1,11 @@
+clear
+echo ""
+echo "====================================================================================="
+echo "Menu Board > Manage Database > List All Database"
+echo "/-------------------------/"
+echo "- List All Database"
+echo "/-----------------------------------------------------------------------------------/"
+echo "The system will display all the Databases on your VPS"
+mysql -e "show databases where \`database\` not in('information_schema', 'test', 'sys', 'phpmyadmin', 'mysql', 'performance_schema')"
+echo ""
+/etc/quicklemp/menu/database_

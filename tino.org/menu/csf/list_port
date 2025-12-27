@@ -1,0 +1,14 @@
+echo "========================================================================="
+echo "Quan Ly Firewall"
+echo "========================================================================="
+
+echo "Danh sach cac port da duoc mo tren firewall:"
+
+cat /etc/csf/csf.conf | grep "TCP_IN ="
+cat /etc/csf/csf.conf | grep "TCP_OUT =" 
+cat /etc/csf/csf.conf | grep "UDP_IN =" 
+cat /etc/csf/csf.conf | grep "UDP_OUT ="
+ 
+sleep 3
+
+/etc/quicklemp/menu/csf_

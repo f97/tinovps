@@ -1,0 +1,41 @@
+#!/bin/bash
+echo ""
+echo "====================================================================================="
+echo "Menu Board > TinoVPS Options"
+echo "/-------------------------/"
+echo "- TinoVPS Options"
+echo "/-----------------------------------------------------------------------------------/"
+echo
+PS3='Input number you choose [0=Exit]: '
+options=("Change Password Admin"  "Optimize Wordpress Images" "Active Plugin" "Deactive Plugin" "Install Premium Plugin Wordpress" "Install Premium Theme Wordpress" "Clean Emty Wordpress Data" "Disable cron wordpress Use crontab")
+
+select opt in "${options[@]}"
+do
+    case $opt in
+        "Change Password Admin")
+            '/etc/quicklemp/menu/wordpress/changepass'
+            ;;
+        "Optimize Wordpress Images")
+            '/etc/quicklemp/menu/wordpress/toi_uu_anh'
+            ;;
+        "Active Plugin")
+            '/etc/quicklemp/menu/wordpress/active_plugin'
+            ;;
+        "Deactive Plugin")
+            '/etc/quicklemp/menu/wordpress/disable_plugin'
+            ;;
+        "Install Premium Plugin Wordpress")
+            '/etc/quicklemp/menu/wordpress/plugin_ban_quyen'
+            ;;
+        "Install Premium Theme Wordpress")
+            '/etc/quicklemp/menu/wordpress/theme_ban_quyen'
+            ;;
+        "Clean Emty Wordpress Data")
+            '/etc/quicklemp/menu/wordpress/xoa_du_lieu'
+            ;;
+        "Disable cron wordpress Use crontab")
+            '/etc/quicklemp/menu/wordpress/cronwordpress'
+            ;;			
+        *) tino;;
+    esac
+done

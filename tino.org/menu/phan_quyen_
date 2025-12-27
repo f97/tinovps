@@ -1,0 +1,34 @@
+# @author: Lãng Tử Cô Độc
+# @website:  https://tinohost.com, https://kienthuclinux.com
+# @since: 2020
+echo ""
+echo "====================================================================================="
+echo "Menu Board > Change Permission Website"
+echo "/-------------------------/"
+echo "- Change Permission Website"
+echo "/-----------------------------------------------------------------------------------/"
+echo 
+printf "Every time you upload data to a website using FTP or sFTP\n"
+printf "You need to perform the corresponding permissions for each User again.\n"
+printf "This authorization will help your website work properly and be able to install Plugins/Themes\n"
+
+printf "The system will automatically run for you ...\n"
+sleep 1
+printf "3...\n"
+sleep 1
+printf "2...\n"
+sleep 1
+printf "1...\n"
+printf "... ...\n"
+for D in /etc/quicklemp/domains/*; do
+    domain=${D##*/}
+    user=$(</etc/quicklemp/domains/$domain/user)
+    echo "Authorization completed for site: $domain, with user : $user"
+    chown -R $user:$user /home/$domain/public_html
+
+done
+echo ""
+echo "Decentralized complete for the entire website !!!."
+exit
+
+

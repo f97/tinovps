@@ -1,0 +1,48 @@
+#!/bin/bash
+echo ""
+echo "====================================================================================="
+echo "Menu Board > Manage Domains"
+echo "/-------------------------/"
+echo "- Manage Domains"
+echo "/-----------------------------------------------------------------------------------/"
+
+echo 
+PS3='Input number you choose (1-8) [0=Exit]: '
+options=("List All Domains" "Add New Domain"  "Delete Domain" "Change PHP Version For Domain" "Change vHost PHP" "Redirect HTTP to HTTPS Domain" "Redirect HTTP to HTTPS All Domains" "Create FTP Account For Domain" "Reset Permission for 1 Domain" "Add Alias Domain")
+select opt in "${options[@]}"
+do
+    case $opt in
+        "List All Domains")
+            '/etc/quicklemp/menu/domain/tinovps_lietketoanbotenmien'
+            ;;
+        "Add New Domain" )
+            '/etc/quicklemp/menu/domain/them_domain'
+            ;;
+        "Delete Domain")
+            '/etc/quicklemp/menu/domain/xoa_domain'
+            ;;
+        "Change PHP Version For Domain")
+            '/etc/quicklemp/menu/domain/thay_doi_phienban_php'
+            ;;
+        "Change vHost PHP")
+            '/etc/quicklemp/menu/domain/thay_doi_tuy_bien_vhost_php'
+            ;;
+        "Redirect HTTP to HTTPS Domain")
+            '/etc/quicklemp/menu/domain/http_to_https_domain'
+            ;;
+        "Redirect HTTP to HTTPS All Domains")
+            '/etc/quicklemp/menu/domain/http_to_https_all'
+            ;;
+        "Create FTP Account For Domain")
+            '/etc/quicklemp/menu/domain/tao_ftp_domain'
+            ;;
+        "Reset Permission for 1 Domain")
+            '/etc/quicklemp/menu/domain/reset_quyen_website'
+            ;;
+        "Add Alias Domain")
+            '/etc/quicklemp/menu/domain/themali'
+            ;;			
+        *) tino;;
+    esac
+done
+

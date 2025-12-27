@@ -1,0 +1,60 @@
+# @author: Nguyen Van Phong from TinoHost
+# @website:  https://tinohost.com, https://kienthuclinux.com
+# @since: 2020
+
+my_ip=$(ip route get 8.8.8.8 | awk -F"src " 'NR==1{split($2,a," ");print a[1]}')
+port=$(</etc/quicklemp/port.txt)
+saoluucode()
+{
+	echo "The system is backing up $website, please wait...."
+	
+	mkdir -p /opt/tinopanel/private_html/$website/backup
+	cd /home/$website/public_html/
+	tar czf /opt/tinopanel/private_html/$website/backup/$website.tar.gz .
+
+	echo "Website backup system $website success..."
+	echo "Link Backup File : /opt/tinopanel/private_html/$website/backup/$website.tar.gz"
+	echo "Link Download : http://$my_ip:$port/$website/backup/$website.tar.gz"
+}
+echo ""
+echo "====================================================================================="
+echo "Menu Board > Backup/Restore On Localhost > Backup Code 1 Website"
+echo "/-------------------------/"
+echo "- Backup Code 1 Website"
+echo "/-----------------------------------------------------------------------------------/"
+echo -n "Enter the domain name you want to backup the entire website data and press [ENTER]: " 
+read website
+
+if [ -d /home/$website/public_html/ ]; then
+	if [ -z "$(ls -A /home/$website/public_html/)" ]; then
+		echo "$website no data available."
+		echo "Please try again...!"
+		/etc/quicklemp/menu/backuplocal_
+	else
+		echo "The system found the website $website on VPS."
+		echo ""
+		if [ -f /opt/tinopanel/private_html/$website/backup/$website.tar.gz ]; then
+		read -r -p "Found an old backup file, do you want to delete and write a new backup data ?. [y/N] " response
+		case $response in
+		    [yY][eE][sS]|[yY]) 
+		    	rm -rf /opt/tinopanel/private_html/$website/backup/$website.tar.gz
+	
+			saoluucode
+		        ;;
+		    *)
+			echo "Old backup file path that you can download :"
+			echo "Link Backup File : /opt/tinopanel/private_html/$website/backup/$website.tar.gz"
+		        echo "Link download: http://$my_ip:$port/$website/backup/$website.tar.gz"
+		        echo "See you again....!"
+		        ;;
+		esac
+		else
+			saoluucode
+		fi
+	fi
+else
+	echo "Err..., System not found $website"
+	echo "See you again....!"
+	/etc/quicklemp/menu/backuplocal_
+fi
+/etc/quicklemp/menu/backuplocal_

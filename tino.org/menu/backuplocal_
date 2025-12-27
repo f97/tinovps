@@ -1,0 +1,29 @@
+#!/bin/bash
+echo ""
+echo "====================================================================================="
+echo "Menu Board > Backup/Restore On Localhost"
+echo "/-------------------------/"
+echo "- Backup/Restore On Localhost"
+echo "/-----------------------------------------------------------------------------------/"
+echo 
+PS3='Input number you choose (1-4) [0=Exit]: '
+options=("Backup Code 1 Website" "Backup Database 1 Website"  "Backup All Code & DataBase" "Delete All Local Backup")
+select opt in "${options[@]}"
+do
+    case $opt in
+        "Backup Code 1 Website")
+            '/etc/quicklemp/menu/backuplocal/backup_code'
+            ;;
+        "Backup Database 1 Website")
+            '/etc/quicklemp/menu/backuplocal/backup_data'
+            ;;
+        "Backup All Code & DataBase")
+            '/etc/quicklemp/menu/backuplocal/backupallsite'
+            ;;
+        "Delete All Local Backup")
+            '/etc/quicklemp/menu/backuplocal/xoa_backup'
+            ;;
+        *) tino;;
+    esac
+done
+

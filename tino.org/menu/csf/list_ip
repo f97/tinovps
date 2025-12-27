@@ -1,0 +1,10 @@
+echo "========================================================================="
+echo "Quan Ly Firewall"
+echo "========================================================================="
+
+echo "list all IP block on VPS:"
+
+cat /etc/csf/csf.deny | awk '{if (NR>=18) print}'
+
+
+/etc/quicklemp/menu/csf_

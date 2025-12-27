@@ -1,0 +1,52 @@
+# @author: Lãng Tử Cô Độc
+# @website:  https://tinohost.com, https://kienthuclinux.com
+# @since: 2020
+if [ "`systemctl is-active mariadb.service`" == "active" ]; then
+echo ""
+echo "====================================================================================="
+echo "Menu Board > Manage Database > Delete Database"
+echo "/-------------------------/"
+echo "- Delete Database"
+echo "/-----------------------------------------------------------------------------------/"
+
+printf "Please consider that when deleting a database it will not be possible to restore the data.\n"
+printf "Make sure you have a backup for yourself.\n"
+echo -n "Input Database Name you want DELETE and press [ENTER]: " 
+read dataname
+
+if [ "$dataname" = "mysql" ] || [ "$dataname" = "infomation_schema" ] || [ "$dataname" = "performance_schema" ]; then
+echo "OMG!!!!!"
+echo "You really want to delete this database, are you sure?"
+echo "Oh!, this Database has been completely deleted on the system already. Have a nice day...!"
+/etc/quicklemp/menu/database_
+fi
+
+if [ -f /var/lib/mysql/$dataname/db.opt ]; then
+read -r -p "The system has found $dataname, are you sure you want to delete it ? [y/N] " response
+case $response in
+    [yY][eE][sS]|[yY]) 
+    cat > "/tmp/config.temp" <<END
+drop database $dataname;
+END
+
+#mysql -u root -p$mariadb_root_password < /tmp/config.temp
+mysql < /tmp/config.temp
+rm -f /tmp/config.temp
+echo "$dataname has been deleted success!"
+
+        ;;
+    *)
+        echo "See you again...!"
+        ;;
+esac
+else
+echo "$dataname does not exist on VPS"
+echo "See you again...!"
+/etc/quicklemp/menu/database_
+fi
+else
+echo "MariaDB has not started or is experiencing an error that cannot be started.!!!"
+echo "Pls check again."
+/etc/quicklemp/menu/database_
+fi
+/etc/quicklemp/menu/database_

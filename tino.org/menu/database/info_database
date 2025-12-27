@@ -1,0 +1,22 @@
+clear
+echo ""
+echo "====================================================================================="
+echo "Menu Board > Manage Database > View Information DataBase"
+echo "/-------------------------/"
+echo "- View Information DataBase"
+echo "/-----------------------------------------------------------------------------------/"
+
+echo "The system will display Database information on your VPS"
+mysql -e "show databases where \`database\` not in('information_schema', 'test', 'sys', 'phpmyadmin', 'mysql', 'performance_schema')"
+echo
+read -p "Input Database Name you need check information : " database
+
+if [ "$database" = '' ]; then
+    clear
+    /etc/quicklemp/menu/database_
+fi
+echo "Database information : $database:"
+echo
+mysql -e "SELECT * FROM mysql.db WHERE Db = '$database'\G"
+echo
+/etc/quicklemp/menu/database_

@@ -1,0 +1,41 @@
+#!/bin/bash
+echo ""
+echo "====================================================================================="
+echo "Menu Board > Manage Setting PHP"
+echo "/-------------------------/"
+echo "- Manage Setting PHP"
+echo "/-----------------------------------------------------------------------------------/"
+echo 
+PS3='Input number you choose (1-7) [0=Exit]: '
+options=("Install More Versions PHP" "Update PHP Installed" "Install Imagick Extension" "Turn on ionCube" "Turn off ionCube" "Turn on OPcache" "Turn off OPcache" "Install ALL PHP Version")
+select opt in "${options[@]}"
+do
+    case $opt in
+        "Install More Versions PHP")
+            '/etc/quicklemp/menu/php/caithemphp'
+            ;;
+        "Update PHP Installed")
+            '/etc/quicklemp/menu/php/cap_nhat_php'
+            ;;
+		"Install Imagick Extension")
+            '/etc/quicklemp/menu/php/imagick'
+            ;;
+		"Turn on ionCube")
+            '/etc/quicklemp/menu/php/bat_ioncube'
+            ;;
+		"Turn off ionCube")
+            '/etc/quicklemp/menu/php/tat_ioncube'
+            ;;
+		"Turn on OPcache")
+            '/etc/quicklemp/menu/php/bat_opcache'
+            ;;
+		"Turn off OPcache")
+            '/etc/quicklemp/menu/php/tat_opcache'
+            ;;
+		"Install ALL PHP Version")
+            '/etc/quicklemp/menu/php/caiallphp'
+            ;;			
+        *) tino;;
+    esac
+done
+

@@ -1,0 +1,24 @@
+#!/bin/bash
+
+echo ""
+echo "====================================================================================="
+echo "Menu Board > Manage Google PageSpeed"
+echo "/-------------------------/"
+echo "- Manage Google PageSpeed"
+echo "/-----------------------------------------------------------------------------------/"
+echo 
+PS3='Input number you choose (1-2) [0=Exit]: '
+options=("Turn On Google PageSpeed" "Turn Off Google PageSpeed")
+select opt in "${options[@]}"
+do
+    case $opt in
+        "Turn On Google PageSpeed")
+            '/etc/quicklemp/menu/pagespeed/pagespeed_on'
+            ;;
+        "Turn Off Google PageSpeed")
+            '/etc/quicklemp/menu/pagespeed/pagespeed_remove'
+            ;;
+        *) tino;;
+    esac
+done
+

@@ -1,0 +1,24 @@
+#!/bin/bash
+
+echo ""
+echo "====================================================================================="
+echo "Menu Board > Manage Modsecurity"
+echo "/-------------------------/"
+echo "- Manage Modsecurity"
+echo "/-----------------------------------------------------------------------------------/"
+echo 
+PS3='Input number you choose (1-2) [0=Exit]: '
+options=("Turn On Modsecurity" "Turn Off Modsecurity")
+select opt in "${options[@]}"
+do
+    case $opt in
+        "Turn On Modsecurity")
+            '/etc/quicklemp/menu/modsecurity/modsecurity_on'
+            ;;
+        "Turn Off Modsecurity")
+            '/etc/quicklemp/menu/modsecurity/modsecurity_off'
+            ;;
+        *) tino;;
+    esac
+done
+

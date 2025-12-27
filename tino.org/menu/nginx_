@@ -1,0 +1,29 @@
+#!/bin/bash
+echo ""
+echo "====================================================================================="
+echo "Menu Board > Manage Setting Nginx"
+echo "/-------------------------/"
+echo "- Manage Setting Nginx"
+echo "/-----------------------------------------------------------------------------------/"
+echo 
+PS3='Input number you choose (1-2)[0=Exit]: '
+options=("Update installed NginX" "Rebuid Vhost Domain Nginx" "Rebuid Vhost Domain Nginx With Http2" "Rebuild Vhost Login Panel Page Admin")
+select opt in "${options[@]}"
+do
+    case $opt in
+        "Update installed NginX")
+            '/etc/quicklemp/menu/nginx/update_nginx'
+            ;;
+        "Rebuid Vhost Domain Nginx")
+            '/etc/quicklemp/menu/nginx/rebuild_vhost'
+            ;;
+        "Rebuid Vhost Domain Nginx With Http2")
+            '/etc/quicklemp/menu/nginx/rebuild_vhost_http2'
+            ;;
+        "Rebuild Vhost Login Panel Page Admin")
+            '/etc/quicklemp/menu/nginx/rebuild_loginadminpage'
+            ;;				
+        *) tino;;
+    esac
+done
+

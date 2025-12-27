@@ -1,0 +1,81 @@
+# @author: Lãng Tử Cô Độc
+# @website:  https://tinohost.com, https://kienthuclinux.com
+# @since: 2020
+printf "=========================================================================\n"
+printf "                Update TinoVPS Script!!! \n"
+printf "=========================================================================\n"
+
+
+SERVICES=("nginx" "pure-ftpd" "mysql")
+
+for SERVICE in "${SERVICES[@]}"; do
+    if systemctl is-active --quiet "$SERVICE"; then
+        echo "$SERVICE is running ..."
+        systemctl restart "$SERVICE"
+    else
+        echo "$SERVICE is stopped"
+        systemctl restart "$SERVICE"
+    fi
+done
+
+
+for D in /opt/php/*; do
+	if [ -d "${D}" ]; then #If a directory
+		php=${D##*/} # Domain name
+		php_ver=${php:3}
+		php_full="php-fpm-${php_ver}"
+	
+	echo "restart $php"
+	service php-fpm-$php_ver restart
+fi
+done
+rm -rf /var/lib/nginx/cache/fastcgi/*
+
+
+if ! systemctl is-active --quiet monit; then
+yum install monit -y  &>/dev/null
+
+rm -rf /etc/monit.d/*
+cat > "/etc/monit.d/logging" <<END
+# log to monit.log
+set logfile /var/log/monit.log
+END
+fi
+
+
+cat > "/etc/monit.d/disk" <<END
+check device rootfs with path /
+  if space usage > 98% then exec "/bin/bash -c '/usr/bin/find /var/log/messages-* /home/*/logs/access_*.gz /home/*/logs/error_*.gz -delete'"
+END
+cat > "/etc/monit.d/mysql" <<END
+check process mysql with pidfile /var/lib/mysql/sv.pid
+  start program = "/usr/bin/systemctl start mysql"
+  stop program  = "/usr/bin/systemctl stop mysql"
+  if 5 restarts within 5 cycles then timeout
+END
+cat > "/etc/monit.d/nginx" <<END
+check process nginx with pidfile /var/run/nginx.pid
+  start program = "/usr/bin/systemctl start nginx"
+  stop program  = "/usr/bin/systemctl stop nginx"
+END
+
+
+for dir in /opt/php/php*; do
+  if [ -d "$dir" ]; then
+    php="${dir##*/}"
+    php_ver="${php:3}"
+    php_full="php-fpm-${php_ver}"
+
+    cat > "/etc/monit.d/php$php_ver" <<END
+check process php$php_ver with pidfile /opt/php/php$php_ver/var/run/php-fpm.pid
+  start program = "/usr/bin/systemctl start $php_full"
+  stop program = "/usr/bin/systemctl stop $php_full"
+END
+  fi
+done
+systemctl restart monit
+systemctl enable monit
+
+echo "Finished";
+echo '';
+tino

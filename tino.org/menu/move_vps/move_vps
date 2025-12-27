@@ -1,0 +1,591 @@
+gen_passs() {
+    MATRIX='abcdefghijklmnopqrstuvwxyz'
+    LENGTH=3
+    while [ ${n:=1} -le $LENGTH ]; do
+        PASS="$PASS${MATRIX:$(($RANDOM%${#MATRIX})):1}"
+        let n+=1
+    done
+    echo "$PASS"
+}
+gen_pass() {
+    MATRIX='0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz'
+    LENGTH=10
+    while [ ${n:=1} -le $LENGTH ]; do
+        PASS="$PASS${MATRIX:$(($RANDOM%${#MATRIX})):1}"
+        let n+=1
+    done
+    echo "$PASS"
+}
+echo "Neu ban su dung may tinh ssh bang terminal cua macOS hay Linux, ban vui long chinh thoi gian man hinh cho cua terminal ssh de tranh out ket noi ssh"
+echo "Ban sua thoi gian man hinh doi tai file : ~/.ssh/config"
+echo "Neu Du lieu ban khoang 5GB, ban nen chinh gia tri len khoang 600, hoac cao hon"
+echo ""
+echo "Host *"
+echo "ServerAliveInterval 600"
+echo "TCPKeepAlive yes"
+echo "IPQoS=throughput"
+echo ""
+echo "Chuan bi thuc hien sau 10s"
+sleep 10
+echo ""
+echo ""
+echo "Luu Y:"
+echo "Tinh nang move vps nay dang trong phien ban thu nghiem, vui long kiem tra ky lai website sau khi chuyen"
+echo "Tinh nang move tam thoi chi ho tro cac vps su dung LEMP hoac cac vps voi webserver la nginx nhu directadmin voi nginx la webserver"
+echo ""
+echo "mysql root cua ban phai duoc khai bao trong file /root/.my.cnf, hoac ban co the truy cap command mysql bang lenh: mysql, ma khong can nhap pass."
+echo ""
+echo "file  /root/.my.cnf co dang nhu sau:"
+echo "*************************"
+echo "[client]"
+echo "user=root"
+echo "password=pass_root_mysql_vps_cua_ban"
+echo "*************************"
+
+echo ""
+echo "====================================================================================="
+echo "Menu Board > Move All Website From Other VPS"
+echo "/-------------------------/"
+echo "- Add New Domain"
+echo "/-----------------------------------------------------------------------------------/"
+echo ""
+rm -rf /home/tranferstatus
+cd /opt/php/
+number_php=$(ls  | wc -l)
+if ! [ 2 -gt "$number_php" ]; then
+prompt="Please select the version of PHP you want to use for all :"
+options=( $(ls -d *) )
+PS3="$prompt "
+
+select opt in "${options[@]}" "Exit." ; do
+    if (( REPLY == 1 + ${#options[@]} )) ; then
+        exit
+
+    elif (( REPLY > 0 && REPLY <= ${#options[@]} )) ; then
+                echo $opt
+        break
+
+    else
+        echo "Wrong option, please try again: "
+    fi
+done
+php_dir=$opt
+php_ver=${opt:3}
+else
+# php_dir=1
+php_dir=$(ls -d php*)
+php_ver=${php_dir:3}
+fi
+echo ""
+echo ""
+echo "bat dau thiet lap kiet noi" >> /home/tranferstatus
+echo -n "Pls input IP VPS you need tranfer all data to this VPS and press [ENTER]: "
+read remote_ip
+rm -rf /opt/tinoremote
+
+#regex="^(([a-zA-Z]{1})|([a-zA-Z]{1}[a-zA-Z]{1})|([a-zA-Z]{1}[0-9]{1})|([0-9]{1}[a-zA-Z]{1})|([a-zA-Z0-9][-_\.a-zA-Z0-9]{1,61}[a-zA-Z0-9]))\.([a-zA-Z]{2,13}|[a-zA-Z0-9-]{2,30}\.[a-zA-Z]{2$
+#regex="^(?:(?:25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9][0-9]|[0-9])\.){3}(?:25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9][0-9]|[0-9])$"
+regex="^((25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$"
+
+if [[ $remote_ip =~ $regex ]] ; then
+echo "IP VPS want to retrieve data: $remote_ip"
+else
+echo "Wrong IP  format, returning to main function."
+exit
+fi
+if [ "$remote_ip" = "" ]; then
+echo "The domain you entered is not in the correct format, please try again."
+exit
+fi
+echo "Sau Khi nhap mat khau cua VPS $remote_ip ban co the tat man hinh chuong trinh, vui long KHONG thoat phien bang cach bam ctrl+C"
+echo "Ban co the kiem tra trang thai hoan tat hay chua bang cach doc file tai: /home/tranferstatus"
+sleep 5
+yes | ssh-keygen -f ~/.ssh/id_rsa -P "" &> /dev/null
+
+echo "bat dau thiet lap ket noi toi VPS cu..."
+echo "bat dau thiet lap ket noi toi VPS cu..." > /home/tranferstatus
+
+echo "Vui long nhap mat khau de ket noi toi vps cu"
+
+scp ~/.ssh/id_rsa.pub root@${remote_ip}:~/.ssh/authorized_keys
+ssh root@${remote_ip}  <<'ENDSSH'
+
+rm -rf /opt/tinoremote
+mkdir  -p /opt/tinoremote
+mkdir -p /opt/tinoremote/code
+mkdir -p /opt/tinoremote/data
+code_dir="/opt/tinoremote/code"
+data_dir="/opt/tinoremote/data"
+mkdir -p /opt/tinoremote/domains
+
+yum install rsync  -y
+
+rm -r /tmp/error1 &> /dev/null
+mysql -e "show databases;" 2> /tmp/error1
+
+STATUS=$?
+if [ $STATUS -eq 0 ];
+then
+    echo -e "mysql ket noi thanh cong"
+else
+echo "***************************************"
+echo ""
+echo ""
+echo -e "khong the ket noi duoc voi mysql"
+echo "mysql root tren vps remote cua ban phai duoc khai bao trong file /root/.my.cnf, hoac ban co the truy cap command mysql bang lenh: mysql, ma khong can nhap pass."
+echo ""
+echo "file  /root/.my.cnf co dang nhu sau:"
+echo "*************************"
+echo "[client]"
+echo "user=root"
+echo "password=pass_root_mysql_vps_cua_ban"
+echo "*************************"
+echo "Vui long tao file /root/.my.cnf nay roi thuc hien lai chuyen du lieu"
+echo "fail connect mysql $remote_ip" >> /opt/tinoremote/connect_mysql
+sleep 10
+exit
+fi
+rm -r /tmp/error1
+
+
+
+nginx -T 2>/dev/null | sed -r -e 's/[ \t]*$//' -e 's/^[ \t]*//' -e 's/^#.*$//' -e 's/[ \t]*#.*$//' -e '/^$/d' | \
+sed -e ':a;N;$!ba;s/\([^;\{\}]\)\n/\1 /g' | \
+grep -P 'root[ \t]' | grep -v '\$' | grep '\.' | \
+sed -r -e 's/(\S)[ \t]+(\S)/\1\n\2/g' -e 's/[\t ]//g' -e 's/;//' -e 's/server_name//' -e 's/www.//' | \
+sort | uniq | xargs -L1 > /opt/tinoremote/listdomaindir
+
+nginx -T 2>/dev/null | sed -r -e 's/[ \t]*$//' -e 's/^[ \t]*//' -e 's/^#.*$//' -e 's/[ \t]*#.*$//' -e '/^$/d' | \sed -e ':a;N;$!ba;s/\([^;\{\}]\)\n/\1 /g' | \grep -P 'server_name[ \t]' | grep -v '\$' | grep '\.' | \sed -r -e 's/(\S)[ \t]+(\S)/\1\n\2/g' -e 's/[\t ]//g' -e 's/;//' -e 's/server_name//' -e 's/www.//' | \sort | uniq | xargs -L1 > /opt/tinoremote/listdomain
+
+cd /opt/tinoremote/
+echo "Bat Dau Tien Hanh Backup data"
+while read domain; do
+mkdir -p /opt/tinoremote/domains/$domain
+
+
+nginx -T 2>/dev/null | sed -r -e 's/[ \t]*$//' -e 's/^[ \t]*//' -e 's/^#.*$//' -e 's/[ \t]*#.*$//' -e '/^$/d' -e 's/[\t ]//g' > /opt/tinoremote/nginxT
+awk -v var="$domain;" '$0~var{x=NR+15}(NR<=x){print}' /opt/tinoremote/nginxT  > /opt/tinoremote/domains/$domain/line
+
+domain_dir=$(sort /opt/tinoremote/domains/$domain/line | uniq | grep 'root' | sed -r -e  's/;//' -e  's/root//' | head -n 1)
+domain_dir=${domain_dir// /}
+echo " $domain - duong dan thu muc : $domain_dir"
+
+
+if [ -d $domain_dir ]; then
+echo $domain_dir > /opt/tinoremote/domains/$domain/domain_dir
+echo "$domain" >> /opt/tinoremote/listdomainoke
+else
+echo "khong tim thay thu muc ma nguon cua $domain"
+echo "$domain" >> /opt/tinoremote/fail
+fi
+
+done < /opt/tinoremote/listdomain
+
+echo "Danh sach domain loi do khong tim thay thu muc chua code:"
+cat /opt/tinoremote/fail &> /dev/null
+echo "bat dau tien hanh backup database:"
+mysqlcheck --repair --use-frm --all-databases &> /dev/null
+
+MYSQL=/usr/bin/mysql
+MYSQLDUMP=/usr/bin/mysqldump
+databases=`$MYSQL -e "SHOW DATABASES;" | grep -Ev "(Database|information_schema|performance_schema|mysql|sys|da_roundcube)"`
+for db in $databases; do
+        $MYSQLDUMP --force --opt $db | gzip > "$data_dir/$db.sql.gz"
+done
+echo "backup database hoan tat";
+echo '';
+exit
+
+ENDSSH
+
+
+echo "Dang tien hanh restore cac website..." > /home/tranferstatus
+mkdir -p /opt/tinoremote
+scp -r root@${remote_ip}:/opt/tinoremote/* /opt/tinoremote/
+
+if [ -f /opt/tinoremote/connect_mysql ]; then
+cat /opt/tinoremote/connect_mysql
+exit
+else
+
+sleep 5
+echo "tien hanh restore website"
+php_version="fpm-wordpress-users";
+php_tem="WordPress"
+cd /opt/tinoremote/data
+gunzip *.gz &> /dev/null
+while read domain; do
+
+if [ -f /etc/nginx/conf.d/vhosts/$domain.conf ]; then
+echo "$domain da ton tai tren he thong, khong tien hanh cai de"
+echo "$domain" >> /opt/tinoremote/domain_exits
+else
+echo "$domain" >> /opt/tinoremote/domain_will_tranfer
+fi
+done < /opt/tinoremote/listdomainoke
+
+
+while read domain; do
+
+ domain_dir=$(</opt/tinoremote/domains/$domain/domain_dir)
+
+ echo "Dang tien hanh restore website $domain..." >> /home/tranferstatus
+ echo " $domain - duong dan thu muc : $domain_dir"
+
+echo "Tien Hanh them domain $domain vao VPS"
+user1=${domain//./}
+user2=${user1:0:5}
+randomuser=$(gen_passs)
+user="$user2$randomuser"
+
+useradd -M $user &>/dev/null
+mkdir /etc/quicklemp/domains/$domain
+
+mkdir -p /etc/nginx/conf.d/addon_confs/$domain &>/dev/null
+mkdir -p /home/$domain/public_html &>/dev/null
+mkdir -p /home/$domain/logs &>/dev/null
+mkdir -p /home/$domain/ssl &>/dev/null
+mkdir -p /etc/nginx/conf.d/ssl/$domain &>/dev/null
+
+
+cat > "/opt/php/$php_dir/etc/php-fpm.d/$domain.conf" <<END
+[$domain]
+listen = /dev/shm/$domain.$php_dir.sock;
+user = $user
+group = $user
+listen.owner = nginx
+listen.group = nginx
+listen.mode = 0644
+pm = ondemand
+pm.max_children = 15
+pm.start_servers = 5
+pm.min_spare_servers = 3
+pm.max_spare_servers = 10
+pm.max_requests = 500
+END
+
+cat > "/etc/quicklemp/domains/$domain/user" <<END
+$user
+END
+
+cat > "/etc/quicklemp/domains/$domain/php_dir" <<END
+$php_dir
+END
+cat > "/etc/quicklemp/domains/$domain/page_speed" <<END
+no
+END
+
+cat > "/etc/quicklemp/domains/$domain/php_version" <<END
+$php_version
+END
+
+
+cp -r /etc/nginx/conf.d/custom/$php_version.conf /etc/nginx/conf.d/addon_confs/$domain/$php_version.conf 
+cp -r /etc/nginx/conf.d/custom/restrictions-users.conf /etc/nginx/conf.d/addon_confs/$domain/restrictions-users.conf
+
+cat > "/etc/quicklemp/domains/$domain/php_tem" <<END
+$php_tem
+END
+ 
+ openssl req -x509 -nodes -new -sha256 -days 1024 -newkey rsa:2048 -keyout /etc/nginx/conf.d/ssl/$domain/privkey.key -out /etc/nginx/conf.d/ssl/$domain/chain.pem -subj "/C=US/CN=$domain" &>/dev/null
+ openssl x509 -outform pem -in /etc/nginx/conf.d/ssl/$domain/chain.pem -out /etc/nginx/conf.d/ssl/$domain/fullchain.crt &>/dev/null
+
+cat > "/home/$domain/public_html/index.html" <<END
+<!doctype html>
+<html>
+  <head>
+    <title>This is the title of the webpage!</title>
+  </head>
+  <body>
+    <p>This is an example paragraph. Anything in the <strong>body</strong> tag will appear on the page, just like this <strong>p</strong> tag and its contents.</p>
+  </body>
+</html>
+END
+
+   # chown $user:$user /home/$user/$domain
+    chown -R $user:$user /home/$domain/public_html
+    
+    domain_alias="www.$domain"
+    if [[ $domain == *www* ]]; then
+	    domain_alias=${domain/www./''}
+    fi
+    cat > "/etc/nginx/conf.d/vhosts/$domain.conf" <<END
+server {
+        listen 80;
+        server_name $domain $domain_alias;
+        root /home/$domain/public_html;
+
+#	    access_log /home/$domain/logs/access_log main;
+#	    error_log /home/$domain/logs/error_log warn;
+
+        if (\$bad_bot) { return 444; }
+        set \$fpmuser $domain.$php_dir;
+    include conf.d/addon_confs/$domain/*.conf;		 
+}
+
+END
+
+ cat > "/etc/nginx/conf.d/vhosts/$domain.ssl.conf" <<END
+server {
+        listen 443 ssl http2;
+        server_name $domain $domain_alias;
+        root /home/$domain/public_html;
+		
+#	    access_log /home/$domain/logs/access_ssl_log main;
+#	    error_log /home/$domain/logs/error_ssl_log warn;
+
+        if (\$bad_bot) { return 444; }
+        set \$fpmuser $domain.$php_dir;
+
+        include conf.d/ssl/$domain/ssl.conf;
+        include conf.d/addon_confs/$domain/*.conf;
+}
+END
+cat > "/etc/nginx/conf.d/ssl/$domain/ssl.conf" <<END
+ssl_certificate /etc/nginx/conf.d/ssl/$domain/fullchain.crt;
+ssl_certificate_key /etc/nginx/conf.d/ssl/$domain/privkey.key;
+#ssl_trusted_certificate /etc/nginx/conf.d/ssl/$domain/chain.pem;
+ssl_dhparam /etc/nginx/dhparam.pem;
+ssl_session_timeout 4h;
+ssl_session_cache shared:SSL:20m;
+ssl_session_tickets off;
+ssl_protocols TLSv1.2 TLSv1.3;
+ssl_prefer_server_ciphers on;
+#ssl_ecdh_curve X25519:P-256:P-384:P-224:P-521;
+ssl_buffer_size 1400;
+#ssl_stapling on;
+ssl_stapling_verify on;
+#ssl_trusted_certificate /etc/nginx/conf.d/ssl/$domain/chain.pem;
+resolver 1.1.1.1 8.8.8.8 valid=300s;
+resolver_timeout 5s;
+add_header Strict-Transport-Security "max-age=63072000; includeSubdomains; preload";
+#add_header X-Frame-Options SAMEORIGIN;
+add_header X-Content-Type-Options nosniff;
+
+## Modern compatibility
+ssl_ciphers TLS13-AES-128-GCM-SHA256:TLS13-AES-256-GCM-SHA384:TLS13-CHACHA20-POLY1305-SHA256:ECDHE-ECDSA-AES256-GCM-SHA384:ECDHE-RSA-AES256-GCM-SHA384:ECDHE-ECDSA-CHACHA20-POLY1305:ECDHE-RSA-CHACHA20-POLY1305:ECDHE-ECDSA-AES256-SHA384:ECDHE-RSA-AES256-SHA384;
+
+## Intermediate compatibility
+#ssl_ciphers TLS13-AES-128-GCM-SHA256:TLS13-AES-256-GCM-SHA384:TLS13-CHACHA20-POLY1305-SHA256:ECDHE-ECDSA-CHACHA20-POLY1305:ECDHE-RSA-CHACHA20-POLY1305:ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-RSA-AES128-GCM-SHA256:ECDHE-ECDSA-AES256-GCM-SHA384:ECDHE-RSA-AES256-GCM-SHA384:DHE-RSA-AES128-GCM-SHA256:DHE-RSA-AES256-GCM-SHA384:ECDHE-ECDSA-AES128-SHA256:ECDHE-RSA-AES128-SHA256:ECDHE-ECDSA-AES128-SHA:ECDHE-RSA-AES256-SHA384:ECDHE-RSA-AES128-SHA:ECDHE-ECDSA-AES256-SHA384:ECDHE-ECDSA-AES256-SHA:ECDHE-RSA-AES256-SHA:DHE-RSA-AES128-SHA256:DHE-RSA-AES128-SHA:DHE-RSA-AES256-SHA256:DHE-RSA-AES256-SHA:ECDHE-ECDSA-DES-CBC3-SHA:ECDHE-RSA-DES-CBC3-SHA:EDH-RSA-DES-CBC3-SHA:AES128-GCM-SHA256:AES256-GCM-SHA384:AES128-SHA256:AES256-SHA256:AES128-SHA:AES256-SHA:DES-CBC3-SHA:!DSS;
+
+## Old backward compatibility
+#ssl_ciphers ECDHE-ECDSA-CHACHA20-POLY1305:ECDHE-RSA-CHACHA20-POLY1305:ECDHE-RSA-AES128-GCM-SHA256:ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-RSA-AES256-GCM-SHA384:ECDHE-ECDSA-AES256-GCM-SHA384:DHE-RSA-AES128-GCM-SHA256:DHE-DSS-AES128-GCM-SHA256:kEDH+AESGCM:ECDHE-RSA-AES128-SHA256:ECDHE-ECDSA-AES128-SHA256:ECDHE-RSA-AES128-SHA:ECDHE-ECDSA-AES128-SHA:ECDHE-RSA-AES256-SHA384:ECDHE-ECDSA-AES256-SHA384:ECDHE-RSA-AES256-SHA:ECDHE-ECDSA-AES256-SHA:DHE-RSA-AES128-SHA256:DHE-RSA-AES128-SHA:DHE-DSS-AES128-SHA256:DHE-RSA-AES256-SHA256:DHE-DSS-AES256-SHA:DHE-RSA-AES256-SHA:ECDHE-RSA-DES-CBC3-SHA:ECDHE-ECDSA-DES-CBC3-SHA:EDH-RSA-DES-CBC3-SHA:AES128-GCM-SHA256:AES256-GCM-SHA384:AES128-SHA256:AES256-SHA256:AES128-SHA:AES256-SHA:AES:DES-CBC3-SHA:HIGH:SEED:!aNULL:!eNULL:!EXPORT:!DES:!RC4:!MD5:!PSK:!RSAPSK:!aDH:!aECDH:!EDH-DSS-DES-CBC3-SHA:!KRB5-DES-CBC3-SHA:!SRP;
+END
+
+
+server_ip=$(dig -4 TXT +short o-o.myaddr.l.google.com @ns1.google.com | sed -e 's/\"//g')
+ip=$(dig +short $domain @resolver1.opendns.com)
+wwwdomain=www.$domain
+wwwip=$(dig +short $wwwdomain @resolver1.opendns.com)
+
+echo "$domain point to IP: $ip"
+echo "$wwwdomain point to IP: $wwwip"
+
+if [ "$ip" = "$server_ip" ] || [ "$wwwip" = "$server_ip" ]; then
+    nginx -s reload
+    service php-fpm-$php_ver restart &>/dev/null
+
+echo ""
+echo "$domain has been returned to VPS, installation is in progress SSL Let's Encrypt:"
+sleep 2
+	if [ "$ip" = "$server_ip" ]; then
+		if [ "$wwwip" = "$server_ip" ]; then
+			echo "Setup letenscrypt for $domain ... and $wwwdomain "
+			/root/.acme.sh/acme.sh  --issue -w /home/$domain/public_html/ -d $domain -d $wwwdomain -k 4096				
+				if [ -f /root/.acme.sh/$domain/$domain.cer ]; then
+					echo "Installing SSL for domain $domain, $wwwdomain"
+					/root/.acme.sh/acme.sh --installcert -d $domain --keypath /etc/nginx/conf.d/ssl/$domain/privkey.key --fullchainpath /etc/nginx/conf.d/ssl/$domain/fullchain.crt --debug
+					echo "SSL installation is completed."
+				else
+					echo "SSL settings encountered an error, please check again."
+				fi		
+		else		
+			echo "Setup Let's Enscrypt for $domain ... no record exists $wwwdomain "			
+			/root/.acme.sh/acme.sh  --issue -w /home/$domain/public_html/ -d $domain -k 4096
+			if [ -f /root/.acme.sh/$domain/$domain.cer ]; then
+				echo "Installing SSL for domain $domain ."
+				/root/.acme.sh/acme.sh --installcert -d $domain --keypath /etc/nginx/conf.d/ssl/$domain/privkey.key --fullchainpath /etc/nginx/conf.d/ssl/$domain/fullchain.crt --debug
+				echo "SSL installation is completed."
+			else
+				echo "SSL settings encountered an error, please check again."
+			fi
+		fi
+	else
+	    if [ "$wwwip" = "$server_ip" ]; then
+		    read -r -p "$wwwdomain pointing to the VPS IP, $domain has not been returned to IP VPS, You still want to personalize it $wwwdomain ? [y/N] " response
+            case $response in
+                [yY][eE][sS]|[yY])
+				
+				echo "Setup Let's Enscrypt for $wwwdomain ... "
+				/root/.acme.sh/acme.sh  --issue -w /home/$domain/public_html/ -d $wwwdomain -k 4096
+				if [ -f /root/.acme.sh/$domain/$domain.cer ]; then
+					echo "Installing SSL for domain $domain"
+					/root/.acme.sh/acme.sh --installcert -d $domain --keypath /etc/nginx/conf.d/ssl/$domain/privkey.key --fullchainpath /etc/nginx/conf.d/ssl/$domain/fullchain.crt --debug
+					echo "SSL installation is complete."
+				else
+					echo "SSL settings encountered an error, please check again."
+				fi
+			esac
+		fi
+	echo "$domain, $wwwdomain has not been returned to IP VPS."		
+	fi	
+
+
+fi
+
+    nginx -s reload
+    service php-fpm-$php_ver restart &>/dev/null
+
+echo "rsyn code $domain ve vps"
+cd /home/$domain/public_html
+rm -rf index.html
+#mv /opt/tinoremote/code/$domain.zip .
+#unzip $domain.zip
+#rm -rf $domain.zip
+#scp -r root@${remote_ip}:/opt/tinoremote/* /opt/tinoremote/
+
+echo "Bat dau rsyn domain $domain:"
+rsync -aze ssh root@${remote_ip}:${domain_dir}/ /home/$domain/public_html/
+echo "rsyn domain $domain hoan tat, dang tien hanh kiem tra va cau hinh config"
+if [ -f /home/$domain/public_html/wp-config.php ]; then ## domain them vao la wordpress
+WPDBNAME=`cat /home/$domain/public_html/wp-config.php | grep DB_NAME | cut -d \' -f 4`
+WPDBUSER=`cat /home/$domain/public_html/wp-config.php | grep DB_USER | cut -d \' -f 4`
+WPDBPASS=`cat /home/$domain/public_html/wp-config.php | grep DB_PASSWORD | cut -d \' -f 4`
+
+if [ -f /opt/tinoremote/data/$WPDBNAME.sql ]; then
+
+if [ -f /var/lib/mysql/$WPDBNAME/db.opt ]; then
+echo "Database $WPDBNAME already exists on your VPS"
+WPDBPASS=$(gen_pass)
+WPDBUSER=$(gen_pass)
+WPDBNAME1=$WPDBUSER
+cat > "/tmp/config.temp" <<END
+CREATE DATABASE $WPDBNAME1 COLLATE utf8_general_ci;
+CREATE USER '$WPDBUSER'@'localhost' IDENTIFIED BY '$WPDBPASS';
+GRANT ALL PRIVILEGES ON $WPDBNAME1 . * TO '$WPDBUSER'@'localhost';
+FLUSH PRIVILEGES;
+END
+mysql < /tmp/config.temp
+rm -f /tmp/config.temp
+mysql $WPDBNAME1 < /opt/tinoremote/data/$WPDBNAME.sql
+rm -rf /opt/tinoremote/data/$WPDBNAME.sql
+echo "website $domain them hoan tat, folder:/home/$domain/public_html/ , Thong tin database: dataname: $WPDBNAME1, user: $WPDBUSER, Passworduser: $WPDBPASS " >> /opt/tinoremote/wp-done 
+else
+    cat > "/tmp/config.temp" <<END
+CREATE DATABASE $WPDBNAME COLLATE utf8_general_ci;
+CREATE USER '$WPDBUSER'@'localhost' IDENTIFIED BY '$WPDBPASS';
+GRANT ALL PRIVILEGES ON $WPDBNAME . * TO '$WPDBUSER'@'localhost';
+FLUSH PRIVILEGES;
+END
+mysql < /tmp/config.temp
+rm -f /tmp/config.temp
+mysql $WPDBNAME < /opt/tinoremote/data/$WPDBNAME.sql
+rm -rf /opt/tinoremote/data/$WPDBNAME.sql
+echo "website $domain them hoan tat, folder:/home/$domain/public_html/ , Thong tin database: dataname: $WPDBNAME, user: $WPDBUSER, Passworduser: $WPDBPASS " >> /opt/tinoremote/wp-done 
+fi
+else
+echo "$domain" >> /opt/tinoremote/wp_nodata
+echo "site $domain tien hanh import va cau hinh data oke" >> /home/tranferstatus
+fi
+else
+echo "$domain" >> /opt/tinoremote/not-wp
+fi
+echo "$domain" >> /opt/tinoremote/tranferdone
+echo "site $domain tien hanh restore hoan tat" >> /home/tranferstatus
+done < /opt/tinoremote/domain_will_tranfer
+
+cd /opt/tinoremote/data
+
+if [ "$(ls -A /opt/tinoremote/data)" ]; then
+echo "import cac database khong phai wordpress, hoac la khong duoc cau hinh voi bat ky domain nao tren vps cu"
+
+for WPDBNAME in *; do
+if [ -f /var/lib/mysql/$WPDBNAME/db.opt ]; then
+echo "Database $WPDBNAME already exists on your VPS"
+WPDBPASS=$(gen_pass)
+WPDBUSER=$(gen_pass)
+WPDBNAME1=$WPDBUSER
+cat > "/tmp/config.temp" <<END
+CREATE DATABASE $WPDBNAME1 COLLATE utf8_general_ci;
+CREATE USER '$WPDBUSER'@'localhost' IDENTIFIED BY '$WPDBPASS';
+GRANT ALL PRIVILEGES ON $WPDBNAME1 . * TO '$WPDBUSER'@'localhost';
+FLUSH PRIVILEGES;
+END
+mysql < /tmp/config.temp
+rm -f /tmp/config.temp
+mysql $WPDBNAME1 < /opt/tinoremote/data/$WPDBNAME.sql
+rm -rf /opt/tinoremote/data/$WPDBNAME.sql
+echo "Them database hoan tat, Ten database tren VPS $remote_ip: $WPDBNAME ; Thong tin Database moi - dataname: $WPDBNAME1, user: $WPDBUSER, Passworduser: $WPDBPASS " >> /opt/tinoremote/data-last
+else
+WPDBPASS=$(gen_pass)
+WPDBUSER=$(gen_pass)
+WPDBNAME=$WPDBUSER
+    cat > "/tmp/config.temp" <<END
+CREATE DATABASE $WPDBNAME COLLATE utf8_general_ci;
+CREATE USER '$WPDBUSER'@'localhost' IDENTIFIED BY '$WPDBPASS';
+GRANT ALL PRIVILEGES ON $WPDBNAME . * TO '$WPDBUSER'@'localhost';
+FLUSH PRIVILEGES;
+END
+mysql < /tmp/config.temp
+rm -f /tmp/config.temp
+mysql $WPDBNAME < /opt/tinoremote/data/$WPDBNAME.sql
+rm -rf /opt/tinoremote/data/$WPDBNAME.sql
+echo "Them database hoan tat, Thong tin database: dataname: $WPDBNAME, user: $WPDBUSER, Passworduser: $WPDBPASS " >> /opt/tinoremote/data-last 
+fi
+
+done
+else
+    echo ""
+fi
+echo "phan quyen lai tat ca website:"
+/etc/quicklemp/menu/phan_quyen_
+#########################################
+echo "**************************************************"
+echo "**************************************************"
+echo "**************************************************"
+echo "**************************************************"
+echo "**************************************************"
+echo ""
+echo "**********************"
+if [ -f /opt/tinoremote/wp-done ]; then
+echo "Cac website la wordpress da khoi phuc:"
+cat /opt/tinoremote/wp-done &> /dev/null
+fi
+echo ""
+echo "**********************"
+if [ -f /opt/tinoremote/not-wp ]; then
+echo "Vui long truy cap va cau hinh hinh la cac domain khong phai la wordpress:"
+cat /opt/tinoremote/not-wp  &> /dev/null
+fi
+
+echo ""
+echo "**********************"
+if [ -f /opt/tinoremote/data-last ]; then
+echo "Cac database da them vao VPS khong phai la wordpress, hoac khong duoc cau hinh voi bat ky domain nao:"
+cat /opt/tinoremote/data-last
+fi
+
+echo ""
+echo "**********************"
+if [ -f /opt/tinoremote/domain_exits ]; then
+echo "Cac Domain khong them vao VPS do da ton tai tren he thong:"
+cat /opt/tinoremote/domain_exits  &> /dev/null
+fi
+
+echo ""
+echo "**********************"
+if [ -f /opt/tinoremote/fail ]; then
+echo "Cac Domain khong them vao VPS do khong tim thay thu muc ma nguon tren VPS cu:"
+cat /opt/tinoremote/fail &> /dev/null
+fi
+
+echo ""
+echo "**********************"
+if [ -f /opt/tinoremote/wp_nodata ]; then
+echo "Cac Domain wordpress da them nhung khong tim thay database trong file cau hinh:"
+cat /opt/tinoremote/wp_nodata &> /dev/null
+fi
+
+echo "Move All Site, done !!..." >> /home/tranferstatus
+echo "tranfer done !!"
+fi

@@ -1,0 +1,40 @@
+# @author: Lãng Tử Cô Độc
+# @website:  https://tinohost.com, https://kienthuclinux.com
+# @since: 2020
+clear
+echo ""
+echo "====================================================================================="
+echo "Menu Board > Manage Domains > Change vHost PHP"
+echo "/-------------------------/"
+echo "- Change vHost PHP"
+echo "/-----------------------------------------------------------------------------------/"
+
+cd /etc/quicklemp/domains/
+prompt="Please select domain you want reset Permission: "
+
+options=( $(ls -d *) )
+PS3="$prompt "
+
+select opt in "${options[@]}" "Quit" ; do
+    if (( REPLY == 1 + ${#options[@]} )) ; then
+        /etc/quicklemp/menu/domain_
+
+    elif (( REPLY > 0 && REPLY <= ${#options[@]} )) ; then
+                echo "You are choosing a domain name : $opt"
+                                domain=$opt
+        break
+    else
+        echo "Wrong option, please try again with the option available above: "
+    fi
+done
+
+echo "/-------------------------/"
+
+user=$(</etc/quicklemp/domains/$domain/user)
+
+chown -R $user:$user /home/$domain/public_html/
+
+echo "Set $domain with user: $user done, exit.!"
+sleep 3
+
+/etc/quicklemp/menu/domain_

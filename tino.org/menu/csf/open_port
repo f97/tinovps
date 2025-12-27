@@ -1,0 +1,56 @@
+echo "========================================================================="
+echo "Quan Ly Firewall"
+echo "========================================================================="
+
+echo -n "Pls input number_port you want open [ENTER]: "
+read add_port
+grep_port="${add_port},"
+regex="^([1-9][0-9]{0,3}|[1-5][0-9]{4}|6[0-4][0-9]{3}|65[0-4][0-9]{2}|655[0-2][0-9]|6553[0-5])$"
+if [[ $add_port =~ $regex ]] ; then
+
+TCP_IN=$(cat /etc/csf/csf.conf | grep "TCP_IN = "| grep $add_port|sort | uniq | xargs -L1 | cut -f10 -d "" | awk '{print $NF}'  FS=,)
+TCP_OUT=$(cat /etc/csf/csf.conf | grep 'TCP_OUT = '| grep $add_port|sort | uniq | xargs -L1 | cut -f10 -d "" | awk '{print $NF}'  FS=,)
+UDP_IN=$(cat /etc/csf/csf.conf | grep 'UDP_IN = '| grep $add_port|sort | uniq | xargs -L1 | cut -f10 -d "" | awk '{print $NF}'  FS=,)
+UDP_OUT=$(cat /etc/csf/csf.conf | grep 'UDP_OUT = '| grep $add_port|sort | uniq | xargs -L1 | cut -f10 -d "" | awk '{print $NF}'  FS=,)
+
+TCP_IN_1=$(cat /etc/csf/csf.conf | grep "TCP_IN = "|sort | uniq | xargs -L1 | cut -f4 -d "" | awk '{print $NF}')
+TCP_OUT_1=$(cat /etc/csf/csf.conf | grep 'TCP_OUT = '|sort | uniq | xargs -L1 | cut -f4 -d "" | awk '{print $NF}')
+UDP_IN_1=$(cat /etc/csf/csf.conf | grep 'UDP_IN = '|sort | uniq | xargs -L1 |  cut -f4 -d "" | awk '{print $NF}')
+UDP_OUT_1=$(cat /etc/csf/csf.conf | grep 'UDP_OUT = '|sort | uniq | xargs -L1 |  cut -f4 -d "" | awk '{print $NF}')
+
+
+TCP_IN_new="${TCP_IN_1},$add_port"
+TCP_OUT_new="${TCP_OUT_1},$add_port"
+UDP_IN_new="${UDP_IN_1},$add_port"
+UDP_OUT_new="${UDP_OUT_1},$add_port"
+
+
+echo "port want to add: $add_port"
+echo "firewall config now:"
+
+cat /etc/csf/csf.conf | grep "TCP_IN = "
+cat /etc/csf/csf.conf | grep 'TCP_OUT = '
+cat /etc/csf/csf.conf | grep "UDP_IN = "
+cat /etc/csf/csf.conf | grep "UDP_OUT = "
+
+sleep 3
+
+if  ! ([ "$TCP_IN" = "" ] && [ "$TCP_OUT" = "" ] && [ "$UDP_IN" = "" ] && [ "$UDP_OUT" = "" ]); then
+echo "port: $add_port already exist!, /etc/quicklemp/menu/csf_ now!!"
+/etc/quicklemp/menu/csf_
+fi
+
+##TCP_IN
+sed -i "s%${TCP_IN_1}%${TCP_IN_new}%" /etc/csf/csf.conf &>/dev/null
+sed -i "s%${TCP_OUT_1}%${TCP_OUT_new}%" /etc/csf/csf.conf &>/dev/null
+sed -i "s%${UDP_IN_1}%${UDP_IN_new}%" /etc/csf/csf.conf &>/dev/null
+sed -i "s%${UDP_OUT_1}%${UDP_OUT_new}%" /etc/csf/csf.conf &>/dev/null
+
+csf -r
+
+echo "add port:  $add_port oke.!!"
+else
+echo "Wrong port VPS  format, returning to main function."
+/etc/quicklemp/menu/csf_
+fi
+/etc/quicklemp/menu/csf_

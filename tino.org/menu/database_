@@ -1,0 +1,33 @@
+#!/bin/bash
+echo ""
+echo "====================================================================================="
+echo "Menu Board > Manage Database"
+echo "/-------------------------/"
+echo "- Manage Database"
+echo "/-----------------------------------------------------------------------------------/"
+
+echo 
+PS3='Input number you choose (1-5) [0=Exit]: '
+options=("List All Database" "Add New Database"  "Delete Database" "View Information DataBase" "Change Password User Database")
+select opt in "${options[@]}"
+do
+    case $opt in
+        "List All Database")
+            '/etc/quicklemp/menu/database/list_database'
+            ;;
+        "Add New Database")
+            '/etc/quicklemp/menu/database/tao-database'
+            ;;
+        "Delete Database")
+            '/etc/quicklemp/menu/database/xoa-database'
+            ;;
+        "View Information DataBase")
+            '/etc/quicklemp/menu/database/info_database'
+            ;;
+        "Change Password User Database")
+            '/etc/quicklemp/menu/database/change_password'
+            ;;
+        *) tino;;
+    esac
+done
+

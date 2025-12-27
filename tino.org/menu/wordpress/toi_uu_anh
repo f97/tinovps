@@ -1,0 +1,110 @@
+
+# @author: Lãng Tử Cô Độc
+# @domain:  https://tinohost.com, https://kienthuclinux.com
+# @since: 2020clear
+my_ip=$(ip route get 8.8.8.8 | awk -F"src " 'NR==1{split($2,a," ");print a[1]}')
+port=$(</etc/quicklemp/port.txt)
+saoluucode()
+{
+
+size_site=$(du -s /home/$domain/public_html/ | awk '{print $1}')
+size_disk=$(df  /| grep -vE '^Filesystem'|  awk '{ print $4}')
+
+echo "************************"
+echo "Dung luong Code website backup: $[size_site/1024] MB"
+echo "dung luong VPS con trong: $[size_disk/1024] MB"
+echo ""
+
+if ! [ "$size_site" -gt "$size_disk" ]; then
+	rm -rf /opt/tinopanel/private_html/$domain/backup/$domain.tar.gz
+	echo "The system is backing up $domain, please wait...."
+	
+	mkdir -p /opt/tinopanel/private_html/$domain/backup
+	cd /home/$domain/public_html/
+	tar czf /opt/tinopanel/private_html/$domain/backup/$domain.tar.gz .
+
+	echo "domain backup system $domain success..."
+	echo "Link Backup File : /opt/tinopanel/private_html/$domain/backup/$domain.tar.gz"
+	echo "Link Download : http://$my_ip:$port/$domain/backup/$domain.tar.gz"
+else
+echo "Khong du dung luong o cung VPS backup website truoc khi toi uu hinh Anh website wordpress"
+while true; do
+    read -p "Ban co muon bo qua backup, tiep tuc toi uu hinh Anh cho ten mien: $domain ?" yn
+    case $yn in
+        [Yy]* ) break;;
+        [Nn]* ) /etc/quicklemp/menu/wordpress_;;
+        * ) echo "Vui long tra loi: yes or no.";;
+    esac
+done 
+ 
+fi
+}
+
+echo ""
+echo "====================================================================================="
+echo "Toi uu hinh anh"
+echo "/-------------------------/"
+echo "- Toi uu hinh anh"
+echo "/-----------------------------------------------------------------------------------/"
+
+
+
+cd /etc/quicklemp/domains/
+prompt="Vui long chon ten mien ban muon toi uu hinh anh:"
+
+options=( $(ls -d *) )
+PS3="$prompt "
+
+select opt in "${options[@]}" "Quit" ; do
+    if (( REPLY == 1 + ${#options[@]} )) ; then
+        /etc/quicklemp/menu/domain_
+
+    elif (( REPLY > 0 && REPLY <= ${#options[@]} )) ; then
+                echo "You are choosing a domain name : $opt"
+                                domain=$opt
+        break
+    else
+        echo "Wrong option, please try again with the option available above: "
+    fi
+done
+
+php_dir=$(</etc/quicklemp/domains/$domain/php_dir)
+php_ver=${php_dir:3}
+
+if ! [ -f /home/$domain/public_html/wp-config.php ]; then
+echo "domain khong phai la wordpress .. thoat.!"
+/etc/quicklemp/menu/wordpress_
+fi
+
+
+echo ""
+while true; do
+    read -p "Ban co muon backup lai du lieu $domain truoc khi toi uu hinh Anh?" yn
+    case $yn in
+        [Yy]* ) saoluucode; break;;
+        [Nn]* ) break;;
+        * ) echo "Vui long tra loi: yes or no.";;
+    esac
+done
+
+size_before=$(du -sh /home/$domain/public_html/wp-content/uploads/ | awk '{print $1}')
+
+echo "Dang tien hanh toi uu hinh anh, vui long doi...."
+find /home/$domain/public_html/wp-content/uploads/  -type f -size +148k \( -iname "*.jpg" -o -iname "*.jpeg" \)  -exec jpegoptim -m 75 -f --strip-all {} \;  >&/dev/null
+find /home/$domain/public_html/wp-content/uploads/ -type f  -size +148k -iname "*.png" -exec pngquant --quality=75-80  --ext=.png --force {} \; >&/dev/null
+
+size_after=$(du -sh /home/$domain/public_html/wp-content/uploads/ | awk '{print $1}')
+
+echo "dung luong truoc khi toi uu : $size_before"
+echo "dung luong sau khi toi uu : $size_after"
+
+nginx -s reload  >&/dev/null
+service php-fpm-$php_ver restart  >&/dev/null
+echo ""
+rm -rf /var/lib/nginx/cache/fastcgi/* 
+
+echo "Toi uu hinh anh hoan tat!!"
+
+
+
+/etc/quicklemp/menu/wordpress_

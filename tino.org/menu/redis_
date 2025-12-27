@@ -1,0 +1,94 @@
+cd /opt/php/
+echo ""
+echo "====================================================================================="
+echo "Menu Board > Manage Setting PHP > Update PHP Installed"
+echo "/-------------------------/"
+echo "- Update PHP Installed"
+echo "/-----------------------------------------------------------------------------------/"
+prompt="Select the  PHP version you want install redis ? :"
+
+options=( $(ls -d *) )
+PS3="$prompt "
+select opt in "${options[@]}" "Quit" ; do
+    if (( REPLY == 1 + ${#options[@]} )) ; then
+        exit
+
+    elif (( REPLY > 0 && REPLY <= ${#options[@]} )) ; then
+                echo $opt
+        break
+
+    else
+        echo "Wrong option, please try again: "
+    fi
+done
+
+redis_ver="4.2.0"
+
+php_dir=$opt
+php_ver1=${opt:3:1}
+php_ver=${opt:4}
+php_service=${opt:3}
+
+phptien="_"
+php_pick=($php_ver1.$php_ver)
+php_com=($php_ver1$phptien$php_ver)
+echo "You choose version $php_pick"
+
+phpinfo=${php_pick:0:1}
+
+redis=$(/opt/php/$php_dir/bin/php -m | grep redis)
+
+if ! [ "$redis" = "" ]; then
+echo "redis da duoc cai dat tren $php_dir"
+# check redis service 
+if systemctl is-active --quiet redis; then
+	echo -e "\nredis process detected, redis service no need install exit...\n"
+else
+yum install redis -y
+service redis start
+systemctl enable redis
+service redis restart
+fi
+exit
+else
+
+
+if [ "$phpinfo" = "7" ] ; then
+
+cd /opt/php/$php_dir/bin/
+printf "\n" | /opt/php/$php_dir/bin/pecl install redis
+echo extension=redis.so >> /opt/php/$php_dir/lib/php.ini
+
+else
+
+if [ "$php_pick" = "5.3" ] ; then
+redis_ver="2.2.8"
+fi
+
+cd /opt/php/$php_dir/
+wget https://pecl.php.net/get/redis-$redis_ver.tgz
+tar -vxzf redis-$redis_ver.tgz
+
+cd redis-$redis_ver
+../bin/phpize
+./configure --with-php-config=/opt/php/$php_dir/bin/php-config
+make && make install
+echo extension=redis.so >> /opt/php/$php_dir/lib/php.ini
+fi
+
+##ca
+if systemctl is-active --quiet redis; then
+	echo -e "\nredis process detected, redis service no need install ...\n"
+else
+yum install redis -y
+service redis start
+systemctl enable redis
+service redis restart
+fi
+service php-fpm-$php_service restart
+echo "Install redis to $php_dir done !!"
+fi
+
+exit
+
+

@@ -1,0 +1,100 @@
+clear
+# @author: Nguyen Van Phong from TinoHost
+# @website:  https://tinohost.com, https://kienthuclinux.com
+# @since: 2020
+echo ""
+echo "====================================================================================="
+echo "Menu Board > TinoVPS Options > Delete data wordpress"
+echo "/-------------------------/"
+echo "- Change Password WordPress"
+echo "/-----------------------------------------------------------------------------------/"
+echo "Obtaining information about available domain names on VPS."
+echo "Here are the domain names that have been added on your VPS."
+sleep 2
+echo ""
+gen_pass() {
+    MATRIX='0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz'
+    LENGTH=16
+    while [ ${n:=1} -le $LENGTH ]; do
+        PASS="$PASS${MATRIX:$(($RANDOM%${#MATRIX})):1}"
+        let n+=1
+    done
+    echo "$PASS"
+}
+
+cd /etc/quicklemp/domains/
+# check xem da co domain nao tren vps chua
+if [ -z "$(ls -A /etc/quicklemp/domains/)" ]; then
+   echo "you dont have any domain, pls add 1 domain first!!!"
+ /etc/quicklemp/menu/app_
+fi
+## end check
+prompt="Choies domain:"
+options=( $(ls -d *) )
+PS3="$prompt "
+
+select opt in "${options[@]}" "Exit." ; do
+    if (( REPLY == 1 + ${#options[@]} )) ; then
+        /etc/quicklemp/menu/app_
+
+    elif (( REPLY > 0 && REPLY <= ${#options[@]} )) ; then
+                echo $opt
+        break
+
+    else
+        echo "Wrong option, please try again: "
+    fi
+done
+
+domain=$opt
+user=$(</etc/quicklemp/domains/$domain/user)
+php_version=$(</etc/quicklemp/domains/$domain/php_version)
+cd /home/$domain/public_html/
+
+if ! [ -f /home/$domain/public_html/wp-config.php ]; then
+echo "domain khong phai la wordpress .. thoat.!"
+/etc/quicklemp/menu/wordpress_
+fi
+
+
+cd /home/$domain/public_html/
+
+while true; do
+    read -p "Xoa tat ca plugins... ?" yn
+    case $yn in
+        [Yy]* ) wp plugin delete $(wp plugin list  --field=name --allow-root) --allow-root; break;;
+        [Nn]* ) break;;
+        * ) echo "Vui long tra loi: y/n hoac yes or no.";;
+    esac
+done
+
+while true; do
+    read -p "Xoa tat ca theme... ?" yn
+    case $yn in
+        [Yy]* )wp theme install twentytwenty --activate --allow-root; wp theme delete $(wp theme list  --field=name --allow-root) --allow-root > /dev/null 2>&1; break;;
+        [Nn]* ) break;;
+        * ) echo "Vui long tra loi: y/n hoac yes or no.";;
+    esac
+done
+
+while true; do
+    read -p "Xoa tat ca du lieu $domain bao gom: All post, comment, terms, hinh anh ... ?" yn
+    case $yn in
+        [Yy]* ) wp site empty --uploads --yes --allow-root; break;;
+        [Nn]* ) break;;
+        * ) echo "Vui long tra loi: y/n hoac yes or no.";;
+    esac
+done
+
+while true; do
+    read -p "Cai dat lai core wordpress... ?" yn
+    case $yn in
+        [Yy]* ) wp core download --force  --allow-root; break;;
+        [Nn]* ) break;;
+        * ) echo "Vui long tra loi: y/n hoac yes or no.";;
+    esac
+done
+
+chown -R $user:$user /home/$domain/public_html/
+
+/etc/quicklemp/menu/wordpress_

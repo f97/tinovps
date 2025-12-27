@@ -1,0 +1,97 @@
+# @author: Nguyen Van Phong from TinoHost
+# @website:  https://tinohost.com, https://kienthuclinux.com
+# @since: 2020
+echo ""
+echo "====================================================================================="
+echo "Menu Board > Manage Domains > List all Domains"
+echo "/-------------------------/"
+echo "- List all Domains"
+echo "/-----------------------------------------------------------------------------------/"
+echo ""
+echo "System will be list at here all Domain you added to VPS :"
+cd /etc/quicklemp/domains
+rm -rf /tmp/in.txt
+echo "*************************************************************************************/"
+cat >> "/tmp/in.txt" <<END
+List Domains
+------------
+PHP-Version
+-----------
+PageSpeed
+---------
+vHost-PHP
+---------
+User-FPM
+---------
+SIZE
+-----
+END
+
+for D in /etc/quicklemp/domains/*; do
+        if [ -d "${D}" ]; then #If a directory
+                domain=${D##*/} # Domain name
+page_speed=$(</etc/quicklemp/domains/$domain/page_speed)
+php_dir=$(</etc/quicklemp/domains/$domain/php_dir)
+php_tem=$(</etc/quicklemp/domains/$domain/php_tem)
+php_version=$(</etc/quicklemp/domains/$domain/php_version)
+user=$(</etc/quicklemp/domains/$domain/user)
+sizedomain=$(du -s /home/$domain/public_html/ | awk '{print $1}')
+
+
+cat >> "/tmp/in.txt" <<END
+Domain
+$domain
+PHP
+$php_dir
+PageSpeed
+$page_speed
+Vhost_PHP
+$php_tem
+User_FPM
+$user
+DISK
+$[sizedomain/1024] M
+END
+				
+        fi
+done
+
+tmp=$(cat /tmp/in.txt | tr -d " \t\r")
+echo "$tmp" > /tmp/in.txt
+in_file=/tmp/in.txt      # Input file
+params=6            # Parameters count
+res_file=$(mktemp)  # Temporary file
+sep='  '             # Separator character
+
+# Print header
+cnt=0
+for i in $(cat $in_file | head -$((params*2))); do
+    if [ $((cnt % 2)) -eq 0 ]; then
+        echo $i
+    fi
+    cnt=$((cnt+1))
+done | sed ":a;N;\$!ba;s/\n/$sep/g" >>$res_file
+
+# Parse and print values
+cnt=0
+for i in $(cat $in_file); do
+    # Print values, skip param names
+    if [ $((cnt % 2)) -eq 1 ]; then
+        echo -n $i >>$res_file
+    fi
+
+    if [ $(((cnt+1) % (params*2))) -eq 0 ]; then
+        # Values line is finished, print newline
+        echo >>$res_file
+    elif [ $((cnt % 2)) -eq 1 ]; then
+        # More values expected to be printed on this line
+        echo -n "$sep" >>$res_file
+    fi
+
+    cnt=$((cnt+1))
+done
+
+# Make nice table format
+cat $res_file | column -t
+rm -f $res_file
+/etc/quicklemp/menu/domain_

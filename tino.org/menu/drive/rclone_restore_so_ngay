@@ -1,0 +1,108 @@
+server_ip=$(dig -4 TXT +short o-o.myaddr.l.google.com @ns1.google.com | sed -e 's/\"//g')
+SERVER_NAME=BACKUP_$server_ip
+port=$(</etc/quicklemp/port.txt)
+# @author: Lãng Tử Cô Độc
+# @website:  https://tinohost.com, https://kienthuclinux.com
+# @since: 2020clear
+cd /etc/quicklemp/domains/
+prompt="Select the domain name you want to recover from Google Drive>:"
+
+options=( $(ls -d *) )
+PS3="$prompt "
+
+select opt in "${options[@]}" "Quit" ; do
+    if (( REPLY == 1 + ${#options[@]} )) ; then
+        /etc/quicklemp/menu/drive_
+
+    elif (( REPLY > 0 && REPLY <= ${#options[@]} )) ; then
+                echo "You are selecting the recovery domain is: $opt"
+				domain=$opt
+        break
+    else
+        echo "Incorrect options, please try again with the above order numbers: "
+    fi
+done
+
+counter=1
+while [ $counter == 1 ]
+do
+echo ""
+echo "------------------------"
+echo "VD: if you enter 7, then the CODE Website will be restored 7 days ago"
+echo "VD: if you enter 0, then the CODE Website will be restored at 2:30 AM today"
+echo ""
+echo -n "Please select the number of previous days you wish to recover > "
+read number
+if ! [[ "$number" =~ ^[0-9]+$ ]]; then
+echo ""
+echo "Please enter the correct format as a number:"
+continue;
+fi
+
+if [ "0" -gt "$number" ]; then
+echo "The input value is incorrect, please enter it again:"
+continue;
+fi
+
+
+echo "You choose a data recovery date from Google Drive is:"
+date +%F --date="$number days ago "
+break;
+done
+
+date_backup=$(date +%F --date="$number days ago")
+
+rclone lsd remote:/$SERVER_NAME/ | grep $date_backup > /tmp/test
+
+if [ -s /tmp/test ]; then
+
+user=$(</etc/quicklemp/domains/$domain/user)
+
+# tao folder tai backup .
+mkdir -p /root/backup_restore/$domain/
+
+mkdir -p /opt/tinopanel/private_html/$domain/backup
+
+cd /home/$domain/public_html/
+echo "Back up the code $domain current now.. !"
+tar czf /opt/tinopanel/private_html/$domain/backup/$domain.tar.gz .
+echo ""
+echo "Backed up Code Website $domain current success..."
+
+echo "******************************************************************************************"
+echo ""
+echo "Link download code website $domain current:"
+echo "Link download code website: /opt/tinopanel/private_html/$website/backup/$domain.tar.gz"
+echo "Link download: http://$server_ip:$port/$domain/backup/$domain.tar.gz"
+echo ""
+echo "******************************************************************************************"
+echo ""
+
+## donwload file tu google
+echo "Download database and source code from Google Drivee"
+
+cd /home/$domain/public_html/
+rm -rf /home/$domain/public_html/
+rclone copy "remote:/$SERVER_NAME/$date_backup/source/$domain.zip" /home/$domain/public_html/ --fast-list --transfers=40 --checkers=40 --tpslimit=10 --drive-chunk-size=1M --verbose --log-file=/root/Rclone.log
+
+echo "Download the data is complete, start recovery!"
+sleep 3
+
+cd /home/$domain/public_html/
+
+unzip -o $domain.zip > /dev/null
+
+#unzip -o /root/restore/$user/$domain.zip -d / > /dev/null
+
+chown -R $user:$user /home/$domain/public_html/
+rm -rf /home/$domain/public_html/$domain.zip
+echo "Successfully restored website code $domain at the backup: $date_backup"
+echo "Please note this is a backup of website data, not accompanied by a web database. You should perform a synchronous backup of both the Website Code and the Database to avoid data synchronization errors."
+echo "Have a nice day!"
+
+else
+   echo "No backups found on date : $date_backup"
+   echo "See You Again... !!"
+fi
+/etc/quicklemp/menu/drive_
+

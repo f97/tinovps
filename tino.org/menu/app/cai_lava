@@ -1,0 +1,134 @@
+clear
+# @author: Nguyen Van Phong from TinoHost
+# @website:  https://tinohost.com, https://kienthuclinux.com
+# @since: 2020
+echo ""
+echo "====================================================================================="
+echo "Menu Board > TinoVPS Options > Automatic Install Website lavarel"
+echo "/-------------------------/"
+echo "- Automatic Install Website lavarel"
+echo "/-----------------------------------------------------------------------------------/"
+echo "Obtaining information about available domain names on VPS."
+echo "Here are the domain names that have been added on your VPS."
+sleep 2
+echo ""
+gen_pass() {
+    MATRIX='0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz'
+    LENGTH=16
+    while [ ${n:=1} -le $LENGTH ]; do
+        PASS="$PASS${MATRIX:$(($RANDOM%${#MATRIX})):1}"
+        let n+=1
+    done
+    echo "$PASS"
+}
+gen_user() {
+    MATRIX='abcdefghijklmnopqrstuvwxyz'
+    LENGTH=6
+    while [ ${n:=1} -le $LENGTH ]; do
+        PASS="$PASS${MATRIX:$(($RANDOM%${#MATRIX})):1}"
+        let n+=1
+    done
+    echo "$PASS"
+}
+cd /etc/quicklemp/domains/
+# check xem da co domain nao tren vps chua
+if [ -z "$(ls -A /etc/quicklemp/domains/)" ]; then
+   echo "you dont have any domain, pls add 1 domain first!!!"
+ /etc/quicklemp/menu/app_
+fi
+## end check
+prompt="Please select the domain name with the corresponding number to install lavarel Website $domain:"
+options=( $(ls -d *) )
+PS3="$prompt "
+
+select opt in "${options[@]}" "Exit." ; do
+    if (( REPLY == 1 + ${#options[@]} )) ; then
+        /etc/quicklemp/menu/app_
+
+    elif (( REPLY > 0 && REPLY <= ${#options[@]} )) ; then
+                echo $opt
+        break
+
+    else
+        echo "Wrong option, please try again: "
+    fi
+done
+
+domain=$opt
+user=$(</etc/quicklemp/domains/$domain/user)
+php_version=$(</etc/quicklemp/domains/$domain/php_version)
+php_ver=${php_version:3}
+if [[ ! -f "/usr/bin/composer" ]]; then
+	echo "Install Composer..."
+	sleep 1
+	cd
+	php -r "copy('https://getcomposer.org/installer', 'composer-setup.php');"
+	php -d memory_limit=-1 composer-setup.php
+	php -r "unlink('composer-setup.php');"
+	mv composer.phar  /usr/bin/composer
+	clear
+fi
+
+cd /home/$domain/public_html/
+read -r -p "do you want New install sourcode Lavarel for $domain , press Y to continue ?.[y/N]: " response
+case $response in
+    [yY][eE][sS]|[yY])
+
+rm -rf /home/$domain/public_html/* &> /dev/null
+rm -rf /home/$domain/public_html/.* &> /dev/null
+rm -rf /var/lib/nginx/cache/fastcgi/* &> /dev/null
+
+composer create-project --prefer-dist laravel/laravel ./
+chown -R $user:$user /home/$domain/public_html/
+mv /home/$domain/public_html/.env.example  /home/$domain/public_html/.env
+ali_user=$(gen_user)
+password=$(gen_pass)
+password_site=$(gen_pass)
+
+if [[ $user == *['!'@#\$%^\&*()_+-]* ]]
+then
+dataname=$(gen_user)
+username=$dataname
+else
+dataname="${user}_${ali_user}"
+username="${user}_${ali_user}"
+fi
+
+
+mysql -e "CREATE DATABASE IF NOT EXISTS $dataname"
+mysql -e "CREATE USER IF NOT EXISTS '$username'@'localhost' IDENTIFIED BY '$password'"
+mysql -e "GRANT ALL PRIVILEGES ON $dataname.* TO '$username'@'localhost'"
+mysql -e "FLUSH PRIVILEGES"
+
+echo ""
+echo "The system created Database with the name $dataname success !."
+echo "================================================================================="
+echo ""
+echo "Information detail for Database:"
+printf "Database Name: $dataname\nDatabase User: $username\nDatabase Password: $password\n\n"
+echo "================================================================================="
+cd /home/$domain/public_html/
+
+
+sed -i "s/APP_ENV=local/APP_ENV=production/g" /home/$domain/public_html/.env
+sed -i "s/DB_DATABASE=laravel/DB_DATABASE=$dataname/g" /home/$domain/public_html/.env
+sed -i "s/DB_USERNAME=root/DB_USERNAME=$username/g" /home/$domain/public_html/.env
+sed -i "s/DB_PASSWORD=/DB_PASSWORD=$password/g" /home/$domain/public_html/.env
+
+sed -i "s/$domain\/public_html;/$domain\/public_html\/public;/g" /etc/nginx/conf.d/vhosts/$domain.ssl.conf
+sed -i "s/$domain\/public_html;/$domain\/public_html\/public;/g" /etc/nginx/conf.d/vhosts/$domain.conf
+
+
+service php-fpm-$php_ver restart &>/dev/null
+
+echo ""
+echo "================================================================================="
+echo ""
+echo "Link to web : http://$domain"
+echo ""
+echo "================================================================================="
+echo ""
+chown -R $user:$user * &> /dev/null
+/etc/quicklemp/menu/app_
+esac
+/etc/quicklemp/menu/app_

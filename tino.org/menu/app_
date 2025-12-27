@@ -1,0 +1,27 @@
+#!/bin/bash
+echo ""
+echo "====================================================================================="
+echo "Menu Board > TinoVPS Options"
+echo "/-------------------------/"
+echo "- TinoVPS Options"
+echo "/-----------------------------------------------------------------------------------/"
+echo 
+PS3='Input number you choose (1-3) [0=Exit]: '
+options=("Automatic Install Website WordPress" "Automatic Install Lavarel"  "Automatic Install OpenCart")
+
+select opt in "${options[@]}"
+do
+    case $opt in
+        "Automatic Install Website WordPress")
+            '/etc/quicklemp/menu/app/cai_wp'
+            ;;
+        "Automatic Install Lavarel")
+            '/etc/quicklemp/menu/app/cai_lava'
+            ;;
+        "Automatic Install OpenCart")
+            '/etc/quicklemp/menu/app/cai_opencart'
+            ;;
+        *) tino;;
+    esac
+done
+
