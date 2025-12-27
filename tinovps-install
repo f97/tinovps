@@ -3,6 +3,9 @@
 # @website:  https://tinohost.com, https://kienthuclinux.com
 # @since: 2020
 
+# GitHub repo base URL for downloading assets
+GITHUB_RAW_URL="https://raw.githubusercontent.com/f97/tinovps/master"
+
 
 gen_pass() {
     MATRIX='0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz'
@@ -789,7 +792,7 @@ mkdir -p /etc/nginx/conf.d/
 
 cd /etc/nginx/conf.d/
 
-wget --no-check-certificate https://scripts.tino.org/tino-master.zip
+wget --no-check-certificate $GITHUB_RAW_URL/tino.org/tino-master.zip
 echo "A" | unzip tino-master*
 rm -rf tino-master.zip
 
@@ -962,7 +965,7 @@ mysqladmin drop test -f
 ##
 mkdir -p /etc/quicklemp/menu
 cd /etc/quicklemp/menu
-wget --no-check-certificate http://scripts.tino.org/menu.zip
+wget --no-check-certificate $GITHUB_RAW_URL/tino.org/menu/menu.zip
 unzip menu.zip
 rm -rf menu.zip
 chmod +x /etc/quicklemp/menu/*
@@ -1224,7 +1227,7 @@ mv wp-cli.phar /usr/local/bin/wp    ## di chuyển wp-cli thành thư viện.
 #phpmyadmin
 
 cd /opt/tinopanel/private_html/
-wget --no-check-certificate -q https://scripts.tino.org/guimenu.zip
+wget --no-check-certificate -q $GITHUB_RAW_URL/tino.org/guimenu/guimenu.zip
 echo "A" | unzip guimenu.zip
 rm -rf /opt/tinopanel/private_html/guimenu.zip
 chown -R tinopanel:tinopanel /opt/tinopanel/private_html/
@@ -1279,8 +1282,8 @@ sleep 5
 mkdir -p /etc/nginx/html
 cd /etc/nginx/html
 
-wget --no-check-certificate --backups=1 https://scripts.tino.org/tino-nginx/TEM/aes.min.js  &> /dev/null
-wget --no-check-certificate  --backups=1 https://scripts.tino.org/tino-nginx/TEM/captcha.html  &> /dev/null
+wget --no-check-certificate --backups=1 $GITHUB_RAW_URL/tino.org/tino-nginx/TEM/aes.min.js  &> /dev/null
+wget --no-check-certificate --backups=1 $GITHUB_RAW_URL/tino.org/tino-nginx/TEM/captcha.html  &> /dev/null
 
 csf -x  &> /dev/null
 yum install git jq whois -y  &> /dev/null
@@ -1301,7 +1304,7 @@ echo "TURN ON BLOCK ATTACK DDOS LAYER 7 for $opt"
 echo "yes" > /etc/quicklemp/domains/$opt/ddos-mitigation;
 rm -rf /etc/nginx/conf.d/addon_confs/$opt/checkcookie.conf
 cd /etc/nginx/conf.d/addon_confs/$opt/
-wget https://scripts.tino.org/tino-nginx/SOURCES/checkcookie.conf &> /dev/null
+wget --no-check-certificate $GITHUB_RAW_URL/tino.org/tino-nginx/SOURCES/checkcookie.conf &> /dev/null
 
 cat > "/etc/nginx/conf.d/addon_confs/$opt/checkcookieload.conf" <<END
 location = /captcha.html {
@@ -1490,7 +1493,7 @@ sleep 20
 
 cd /root/
 
-wget --no-check-certificate https://github.com/rclone/rclone/releases/download/v1.72.1/rclone-v1.72.1-linux-amd64.zip
+wget --no-check-certificate $GITHUB_RAW_URL/rclone/rclone-v1.72.1-linux-amd64.zip
 unzip rclone-*
 \cp rclone-*-linux-amd64/rclone /usr/bin/
 rm -rf rclone-*
@@ -1514,8 +1517,3 @@ echo "Tai khoan quan ly ban co the doc tai file: /opt/server_install_account"
 
 
 reboot
-
-#!/bin/bash
-# @author: Lãng Tử Cô Độc
-# @website:  https://tinohost.com, https://kienthuclinux.com
-# @since: 2020
