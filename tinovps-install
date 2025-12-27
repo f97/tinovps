@@ -531,23 +531,19 @@ echo "De moi chuc nang tren VPS hoat dong on dinh, Chung toi khuyen dung VPS co 
 echo "****************************************"
 echo "RHEL 7 (centos 7 ...) Support version php : 5.4 --> 8.2"
 echo "RHEL 7 (centos 7 ...) Support version php : 5.4 --> 8.5"
-echo "RHEL 8 (centos 8, almalinux 8 ...) Support version php : 5.6 --> 8.5"
-echo "RHEL 9 (centos 9, almalinux 9 ...) Support version php : 7.4 --> 8.5"
 echo ""
+echo "RHEL 9 (centos 9, almalinux 9 ...) Support version php : 7.4 --> 8.5"
 printf "Vui long tuy chon phien ban php ban muon cai dat ben duoi:\n"
 
 
 arr_ver=("5.4" "5.5" "5.6" "7.0" "7.1" "7.2" "7.3" "7.4" "8.0" "8.1" "8.2")
 arr_ver=("5.4" "5.5" "5.6" "7.0" "7.1" "7.2" "7.3" "7.4" "8.0" "8.1" "8.2" "8.3" "8.4" "8.5")
-arr_go=("5_4" "5_5" "5_6" "7_0" "7_1" "7_2" "7_3" "7_4" "8_0" "8_1" "8_2" "8_3" "8_4" "8_5")
 arr_sock=("54" "55" "56" "70" "71" "72" "73" "74" "80" "81" "82" "83" "84" "85")
 php_version="7.4"; # Default PHP 7.4
 php_version="8.5"; # Default PHP 8.5
-php_go="8_5";
 sock_tino=85;
 prompt="Nhap vao lua chon cua ban [1-8]: "
 prompt="Nhap vao lua chon cua ban [1-14]: "
-options=("Cai dat PHP 5.4" "Cai dat PHP 5.5" "Cai dat PHP 5.6" "Cai dat PHP 7.0" "Cai dat PHP 7.1" "Cat dat PHP 7.2" "Cai dat PHP 7.3" "Cai dat PHP 7.4" "Cai dat PHP 8.0" "Cai dat PHP 8.1" "Cai dat PHP 8.2" "Cai dat PHP 8.3" "Cai dat PHP 8.4" "Cai dat PHP 8.5")
 
 
 
@@ -566,11 +562,11 @@ select opt in "${options[@]}" "Quit" ; do
         
 		if (( REPLY < 3 && ${system_version} == 8 ));then
 			echo "RHEL 8 (centos 8, almalinux 8 ...) Support version php : 5.6 --> 8.2"
-		else
+			echo "RHEL 8 (centos 8, almalinux 8 ...) Support version php : 5.6 --> 8.5"
 
 		if (( REPLY < 8 && ${system_version} == 9 ));then
 		echo "RHEL 9 (centos 9, almalinux 9 ...) Support version php : 7.4 --> 8.2"
-		else
+		echo "RHEL 9 (centos 9, almalinux 9 ...) Support version php : 7.4 --> 8.5"
 				echo ${arr_go[$REPLY-1]}
                 php_version=${arr_ver[$REPLY-1]}
        	       	php_go=${arr_go[$REPLY-1]}
@@ -755,18 +751,18 @@ cd /root/tino/
 ##### cai dat nginx
 
 nginx_version="1.24.0"
-release_nginx="2"
-cd /root/
+nginx_version="1.28.0"
+release_nginx="1"
 
 
 wget --no-check-certificate https://scripts.tino.org/repo_nginx/$system_version/nginx-$nginx_version-$release_nginx.el$system_version.x86_64.rpm
 wget --no-check-certificate https://scripts.tino.org/repo_nginx/$system_version/nginx-module-modsecurity-$nginx_version-$release_nginx.el$system_version.x86_64.rpm
 wget --no-check-certificate https://scripts.tino.org/repo_nginx/$system_version/libmaxminddb-1.7.1-1.el$system_version.x86_64.rpm
-
+wget --no-check-certificate https://scripts.tino.org/repo_nginx/$system_version/libmaxminddb-1.12.2-1.el$system_version.x86_64.rpm
 yum localinstall /root/nginx-$nginx_version-$release_nginx.el$system_version.x86_64.rpm -y
 yum localinstall /root/nginx-module-modsecurity-$nginx_version-$release_nginx.el$system_version.x86_64.rpm -y
 yum localinstall  /root/libmaxminddb-1.7.1-1.el$system_version.x86_64.rpm -y
-
+yum localinstall  /root/libmaxminddb-1.12.2-1.el$system_version.x86_64.rpm -y
 yum localinstall  /root/*.rpm -y
 rpm -Uvh  /root/*.rpm 
 rm -rf /root/*.rpm
@@ -906,7 +902,7 @@ service nginx restart
 
 yum remove mariadb* -y
 
-curl -sS https://downloads.mariadb.com/MariaDB/mariadb_repo_setup | bash -s -- --mariadb-server-version="mariadb-10.6"
+curl -sS https://downloads.mariadb.com/MariaDB/mariadb_repo_setup | bash -s -- --mariadb-server-version="mariadb-11.8"
 yum install mariadb-server mariadb-client -y
 yum update -y
 
