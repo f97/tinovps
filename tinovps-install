@@ -1489,7 +1489,7 @@ sleep 20
 
 cd /root/
 
-wget --no-check-certificate https://github.com/rclone/rclone/releases/download/v1.55.1/rclone-v1.55.1-linux-amd64.zip
+wget --no-check-certificate https://github.com/rclone/rclone/releases/download/v1.72.1/rclone-v1.72.1-linux-amd64.zip
 unzip rclone-*
 \cp rclone-*-linux-amd64/rclone /usr/bin/
 rm -rf rclone-*
