@@ -1377,11 +1377,6 @@ systemctl enable monit  &>/dev/null
 #######################
 
 
-if [ "$sock_tino" -lt 56 ]; then
-  ln -s /opt/remi/php$sock_tino/root/etc /etc/opt/remi/php$sock_tino
-
-fi
-
 ln -s /etc/opt/remi/php$sock_tino/ /opt/php/
 ln -s /etc/opt/remi/php$sock_tino/ /opt/php/php$sock_tino/etc
 unlink /etc/opt/remi/php$sock_tino/php$sock_tino
